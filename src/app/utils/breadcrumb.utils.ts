@@ -18,6 +18,8 @@ const pageHierarchy: { [key: string]: { parent: string | null; label: string } }
   'size': { parent: 'master-data', label: 'Size' },
   'category': { parent: 'master-data', label: 'Category' },
   'user': { parent: 'master-data', label: 'User' },
+  'menu': { parent: 'master-data', label: 'Menu' },
+  'role': { parent: 'master-data', label: 'Role' },
   
   // Order Collection
   'order': { parent: 'dashboard', label: 'Order Collection' },

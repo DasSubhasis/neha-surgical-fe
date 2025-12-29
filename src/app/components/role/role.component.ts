@@ -6,7 +6,8 @@ import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
-import { RoleService, Role, RoleFormData, Permission, ImportRow } from '../../services/role.service';
+import { RoleService, Role, RoleFormData, ImportRow } from '../../services/role.service';
+import { MenuService, Menu } from '../../services/menu.service';
 
 @Component({
   selector: 'app-role',
@@ -31,9 +32,9 @@ export class RoleComponent implements OnInit {
   gridReady: boolean = false;
   private gridApi!: GridApi;
 
-  // Permissions
-  availablePermissions: Permission[] = [];
-  permissionsByModule: { module: string; permissions: Permission[] }[] = [];
+  // Menus
+  availableMenus: Menu[] = [];
+  selectedMenus: number[] = [];
 
   // Error state
   errorMessage: string = '';
@@ -52,7 +53,6 @@ export class RoleComponent implements OnInit {
   formData: RoleFormData = {
     name: '',
     description: '',
-    permissions: [],
     status: 'Active',
     isActive: 'Y'
   };
@@ -66,20 +66,8 @@ export class RoleComponent implements OnInit {
 
   // AG Grid column definitions
   columnDefs: ColDef[] = [
-    { headerName: 'Role Name', field: 'name', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
-    { headerName: 'Description', field: 'description', sortable: true, filter: 'agTextColumnFilter', flex: 2, minWidth: 200 },
-    { 
-      headerName: 'Permissions', 
-      field: 'permissions', 
-      sortable: false, 
-      filter: false, 
-      flex: 1, 
-      minWidth: 120,
-      cellRenderer: (params: any) => {
-        const count = params.data.permissions?.length || 0;
-        return `<span class="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">${count} permissions</span>`;
-      }
-    },
+    { headerName: 'Role Name', field: 'name', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 200 },
+    { headerName: 'Description', field: 'description', sortable: true, filter: 'agTextColumnFilter', flex: 2, minWidth: 250 },
     {
       headerName: 'Status',
       field: 'status',
@@ -164,17 +152,35 @@ export class RoleComponent implements OnInit {
 
   constructor(
     private roleService: RoleService,
+    private menuService: MenuService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.loadPermissions();
+    this.loadMenus();
     this.fetchRoles();
   }
 
-  loadPermissions(): void {
-    this.availablePermissions = this.roleService.getAvailablePermissions();
-    this.permissionsByModule = this.roleService.getPermissionsByModule();
+  loadMenus(): void {
+    this.menuService.getAllMenus(true).subscribe({
+      next: (response: any) => {
+        const data = Array.isArray(response) ? response : (response as any)?.data || [];
+        this.availableMenus = data.map((menu: any) => ({
+          id: menu.menuId || menu.id,
+          menuId: menu.menuId || menu.id,
+          menuName: menu.menuName,
+          menuPath: menu.menuPath,
+          menuIcon: menu.menuIcon,
+          parentMenuId: menu.parentMenuId,
+          sortOrder: menu.sortOrder,
+          isActive: menu.isActive,
+          subMenus: menu.subMenus || []
+        }));
+      },
+      error: (error) => {
+        console.error('Failed to load menus:', error);
+      }
+    });
   }
 
   onGridReady(params: GridReadyEvent): void {
@@ -199,7 +205,6 @@ export class RoleComponent implements OnInit {
           id: role.roleId || role.id,
           name: role.name,
           description: role.description,
-          permissions: role.permissions || [],
           status: role.isActive === 'Y' ? 'Active' : 'Inactive',
           isActive: role.isActive,
           createdAt: role.createdAt
@@ -226,11 +231,10 @@ export class RoleComponent implements OnInit {
   }
 
   handleExportExcel(): void {
-    const headers = ['Role Name', 'Description', 'Permissions Count', 'Status', 'Created At'];
+    const headers = ['Role Name', 'Description', 'Status', 'Created At'];
     const rows = this.roles.map(r => [
       r.name,
       r.description,
-      r.permissions?.length || 0,
       r.status,
       r.createdAt || ''
     ]);
@@ -258,10 +262,10 @@ export class RoleComponent implements OnInit {
     this.formData = {
       name: '',
       description: '',
-      permissions: [],
       status: 'Active',
       isActive: 'Y'
     };
+    this.selectedMenus = [];
     this.isModalOpen = true;
     this.inlineMatches = [];
   }
@@ -271,10 +275,10 @@ export class RoleComponent implements OnInit {
     this.formData = {
       name: role.name || '',
       description: role.description || '',
-      permissions: [...(role.permissions || [])],
       status: role.status || 'Active',
       isActive: role.isActive || 'Y'
     };
+    this.selectedMenus = []; // TODO: Load from role.menus when API supports it
     this.isModalOpen = true;
     this.inlineMatches = [];
   }
@@ -285,10 +289,10 @@ export class RoleComponent implements OnInit {
     this.formData = {
       name: '',
       description: '',
-      permissions: [],
       status: 'Active',
       isActive: 'Y'
     };
+    this.selectedMenus = [];
     this.inlineMatches = [];
   }
 
@@ -389,7 +393,6 @@ export class RoleComponent implements OnInit {
               ...this.roles[index],
               name: this.formData.name,
               description: this.formData.description,
-              permissions: [...this.formData.permissions],
               status: this.formData.isActive === 'Y' ? 'Active' : 'Inactive',
               isActive: this.formData.isActive
             };
@@ -413,7 +416,6 @@ export class RoleComponent implements OnInit {
             id: newId,
             name: this.formData.name,
             description: this.formData.description,
-            permissions: [...this.formData.permissions],
             status: this.formData.isActive === 'Y' ? 'Active' : 'Inactive',
             isActive: this.formData.isActive,
             createdAt: new Date().toISOString().split('T')[0]
@@ -426,89 +428,86 @@ export class RoleComponent implements OnInit {
     }
   }
 
-  // Permission handling
-  isPermissionSelected(permissionId: number): boolean {
-    return this.formData.permissions.includes(permissionId);
+  // Menu selection methods
+  isMenuSelected(menuId: number): boolean {
+    return this.selectedMenus.includes(menuId);
   }
 
-  togglePermission(permissionId: number): void {
-    const index = this.formData.permissions.indexOf(permissionId);
+  toggleMenu(menuId: number): void {
+    const index = this.selectedMenus.indexOf(menuId);
     if (index > -1) {
-      this.formData.permissions.splice(index, 1);
+      this.selectedMenus.splice(index, 1);
     } else {
-      this.formData.permissions.push(permissionId);
+      this.selectedMenus.push(menuId);
     }
   }
 
-  toggleAllModulePermissions(module: string): void {
-    const modulePermissions = this.availablePermissions
-      .filter(p => p.module === module)
-      .map(p => p.id);
-    
-    const allSelected = modulePermissions.every(id => this.formData.permissions.includes(id));
-    
-    if (allSelected) {
-      // Remove all module permissions
-      this.formData.permissions = this.formData.permissions.filter(id => !modulePermissions.includes(id));
-    } else {
-      // Add all module permissions
-      modulePermissions.forEach(id => {
-        if (!this.formData.permissions.includes(id)) {
-          this.formData.permissions.push(id);
-        }
-      });
+  isParentMenuFullySelected(parentMenu: Menu): boolean {
+    if (!parentMenu.subMenus || parentMenu.subMenus.length === 0) {
+      return this.isMenuSelected(parentMenu.menuId || parentMenu.id!);
     }
+    const allSubMenuIds = parentMenu.subMenus.map(sm => sm.menuId || sm.id!);
+    return this.isMenuSelected(parentMenu.menuId || parentMenu.id!) && 
+           allSubMenuIds.every(id => this.selectedMenus.includes(id));
   }
 
-  isModuleFullySelected(module: string): boolean {
-    const modulePermissions = this.availablePermissions
-      .filter(p => p.module === module)
-      .map(p => p.id);
-    return modulePermissions.every(id => this.formData.permissions.includes(id));
+  isParentMenuPartiallySelected(parentMenu: Menu): boolean {
+    if (!parentMenu.subMenus || parentMenu.subMenus.length === 0) {
+      return false;
+    }
+    const allSubMenuIds = parentMenu.subMenus.map(sm => sm.menuId || sm.id!);
+    const selectedCount = allSubMenuIds.filter(id => this.selectedMenus.includes(id)).length;
+    const parentSelected = this.isMenuSelected(parentMenu.menuId || parentMenu.id!);
+    return (parentSelected || selectedCount > 0) && selectedCount < allSubMenuIds.length;
   }
 
-  isModulePartiallySelected(module: string): boolean {
-    const modulePermissions = this.availablePermissions
-      .filter(p => p.module === module)
-      .map(p => p.id);
-    const selectedCount = modulePermissions.filter(id => this.formData.permissions.includes(id)).length;
-    return selectedCount > 0 && selectedCount < modulePermissions.length;
-  }
-
-  getModuleSelectedCount(module: string): number {
-    const modulePermissions = this.availablePermissions
-      .filter(p => p.module === module)
-      .map(p => p.id);
-    return modulePermissions.filter(id => this.formData.permissions.includes(id)).length;
-  }
-
-  selectAllPermissions(): void {
-    this.formData.permissions = this.availablePermissions.map(p => p.id);
-  }
-
-  clearAllPermissions(): void {
-    this.formData.permissions = [];
-  }
-
-  getPermissionName(permissionId: number): string {
-    const permission = this.availablePermissions.find(p => p.id === permissionId);
-    return permission?.name || 'Unknown';
-  }
-
-  getPermissionsByModuleForView(permissions: number[]): { module: string; permissions: string[] }[] {
-    const result: { module: string; permissions: string[] }[] = [];
+  toggleParentMenu(parentMenu: Menu): void {
+    const parentId = parentMenu.menuId || parentMenu.id!;
+    const isFullySelected = this.isParentMenuFullySelected(parentMenu);
     
-    this.permissionsByModule.forEach(group => {
-      const modulePerms = group.permissions
-        .filter(p => permissions.includes(p.id))
-        .map(p => p.name);
+    if (isFullySelected) {
+      // Deselect parent and all submenus
+      const index = this.selectedMenus.indexOf(parentId);
+      if (index > -1) this.selectedMenus.splice(index, 1);
       
-      if (modulePerms.length > 0) {
-        result.push({ module: group.module, permissions: modulePerms });
+      if (parentMenu.subMenus) {
+        parentMenu.subMenus.forEach(subMenu => {
+          const subId = subMenu.menuId || subMenu.id!;
+          const subIndex = this.selectedMenus.indexOf(subId);
+          if (subIndex > -1) this.selectedMenus.splice(subIndex, 1);
+        });
       }
+    } else {
+      // Select parent and all submenus
+      if (!this.selectedMenus.includes(parentId)) {
+        this.selectedMenus.push(parentId);
+      }
+      
+      if (parentMenu.subMenus) {
+        parentMenu.subMenus.forEach(subMenu => {
+          const subId = subMenu.menuId || subMenu.id!;
+          if (!this.selectedMenus.includes(subId)) {
+            this.selectedMenus.push(subId);
+          }
+        });
+      }
+    }
+  }
+
+  getParentMenus(): Menu[] {
+    return this.availableMenus.filter(m => !m.parentMenuId);
+  }
+
+  selectAllMenus(): void {
+    this.selectedMenus = [];
+    this.availableMenus.forEach(menu => {
+      const menuId = menu.menuId || menu.id!;
+      this.selectedMenus.push(menuId);
     });
-    
-    return result;
+  }
+
+  clearAllMenus(): void {
+    this.selectedMenus = [];
   }
 
   // Import functionality
@@ -633,7 +632,6 @@ export class RoleComponent implements OnInit {
         id: nextId++,
         name: item.row.name,
         description: item.row.description,
-        permissions: [],
         status: 'Active',
         isActive: 'Y',
         createdAt: new Date().toISOString().split('T')[0]

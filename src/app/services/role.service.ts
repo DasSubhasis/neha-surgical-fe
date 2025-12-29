@@ -15,8 +15,6 @@ export interface Role {
   roleId?: number;
   name: string;
   description: string;
-  permissions: number[];
-  permissionDetails?: Permission[];
   status: string;
   isActive: string;
   createdAt?: string;
@@ -25,7 +23,6 @@ export interface Role {
 export interface RoleFormData {
   name: string;
   description: string;
-  permissions: number[];
   status: string;
   isActive: string;
 }
@@ -131,7 +128,6 @@ export class RoleService {
     const payload = {
       name: roleData.name,
       description: roleData.description || '',
-      permissions: roleData.permissions || [],
       isActive: roleData.isActive || 'Y'
     };
 
@@ -145,7 +141,6 @@ export class RoleService {
     const payload = {
       name: roleData.name,
       description: roleData.description || '',
-      permissions: roleData.permissions || [],
       isActive: roleData.isActive || 'Y'
     };
 

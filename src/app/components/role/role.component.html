@@ -164,74 +164,74 @@
         </div>
       </div>
 
-      <!-- Right Section: Permissions -->
+      <!-- Right Section: Menu Access -->
       <div class="w-2/3 p-6 overflow-y-auto bg-gray-50">
-        <div class="flex items-center justify-between mb-4">
-          <h4 class="text-sm font-semibold text-gray-900 flex items-center">
-            <svg class="w-4 h-4 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-            </svg>
-            Assign Permissions
-          </h4>
-          <div class="flex gap-2">
-            <button 
-              type="button"
-              (click)="selectAllPermissions()"
-              class="px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
-            >
-              Select All
-            </button>
-            <button 
-              type="button"
-              (click)="clearAllPermissions()"
-              class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
-            >
-              Clear All
-            </button>
-          </div>
-        </div>
-
-        <div class="text-xs text-gray-500 mb-4">
-          Selected: <span class="font-semibold text-indigo-600">{{ formData.permissions.length }}</span> of {{ availablePermissions.length }} permissions
-        </div>
-
-        <!-- Permissions by Module -->
-        <div class="space-y-3">
-          <div *ngFor="let group of permissionsByModule" class="bg-white border rounded-lg p-4 shadow-sm">
-            <!-- Module Header with Toggle All -->
-            <div class="flex items-center justify-between mb-3 pb-2 border-b">
-              <label class="flex items-center cursor-pointer">
-                <input 
-                  type="checkbox"
-                  [checked]="isModuleFullySelected(group.module)"
-                  [indeterminate]="isModulePartiallySelected(group.module)"
-                  (change)="toggleAllModulePermissions(group.module)"
-                  class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                />
-                <span class="ml-2 text-sm font-semibold text-gray-800">{{ group.module }}</span>
-              </label>
-              <span class="text-xs px-2 py-1 rounded-full" 
-                [class]="getModuleSelectedCount(group.module) === group.permissions.length 
-                  ? 'bg-green-100 text-green-700' 
-                  : getModuleSelectedCount(group.module) > 0 
-                    ? 'bg-yellow-100 text-yellow-700' 
-                    : 'bg-gray-100 text-gray-500'">
-                {{ getModuleSelectedCount(group.module) }}/{{ group.permissions.length }}
-              </span>
+        <!-- Menu Access Section -->
+        <div>
+          <div class="flex items-center justify-between mb-4">
+            <h4 class="text-sm font-semibold text-gray-900 flex items-center">
+              <svg class="w-4 h-4 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              Menu Access
+            </h4>
+            <div class="flex gap-2">
+              <button 
+                type="button"
+                (click)="selectAllMenus()"
+                class="px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
+              >
+                Select All
+              </button>
+              <button 
+                type="button"
+                (click)="clearAllMenus()"
+                class="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors"
+              >
+                Clear All
+              </button>
             </div>
-            
-            <!-- Individual Permissions -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-              <label *ngFor="let permission of group.permissions" 
-                class="flex items-center cursor-pointer p-2 rounded hover:bg-gray-50 transition-colors">
-                <input 
-                  type="checkbox"
-                  [checked]="isPermissionSelected(permission.id)"
-                  (change)="togglePermission(permission.id)"
-                  class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                />
-                <span class="ml-2 text-sm text-gray-700">{{ permission.name }}</span>
-              </label>
+          </div>
+
+          <div class="text-xs text-gray-500 mb-4">
+            Selected: <span class="font-semibold text-indigo-600">{{ selectedMenus.length }}</span> of {{ availableMenus.length }} menus
+          </div>
+
+          <!-- Parent Menus with Submenus -->
+          <div class="space-y-3">
+            <div *ngFor="let menu of getParentMenus()" class="bg-white border rounded-lg p-4 shadow-sm">
+              <!-- Parent Menu Header -->
+              <div class="flex items-center justify-between mb-3 pb-2 border-b">
+                <label class="flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox"
+                    [checked]="isParentMenuFullySelected(menu)"
+                    [indeterminate]="isParentMenuPartiallySelected(menu)"
+                    (change)="toggleParentMenu(menu)"
+                    class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span class="ml-2 text-sm font-semibold text-gray-800">{{ menu.menuName }}</span>
+                  <span class="ml-2 text-xs text-gray-500 font-mono">{{ menu.menuPath }}</span>
+                </label>
+                <span *ngIf="menu.subMenus && menu.subMenus.length > 0" class="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-700">
+                  {{ menu.subMenus.length }} submenus
+                </span>
+              </div>
+              
+              <!-- Submenus -->
+              <div *ngIf="menu.subMenus && menu.subMenus.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-2 pl-6">
+                <label *ngFor="let subMenu of menu.subMenus" 
+                  class="flex items-center cursor-pointer p-2 rounded hover:bg-gray-50 transition-colors">
+                  <input 
+                    type="checkbox"
+                    [checked]="isMenuSelected(subMenu.menuId || subMenu.id!)"
+                    (change)="toggleMenu(subMenu.menuId || subMenu.id!)"
+                    class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">{{ subMenu.menuName }}</span>
+                  <span class="ml-1 text-xs text-gray-400 font-mono">{{ subMenu.menuPath }}</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
@@ -274,7 +274,7 @@
 
     <!-- Modal Body -->
     <div class="px-6 py-4 space-y-4 overflow-y-auto flex-1">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="grid grid-cols-1 gap-4">
         <div>
           <div class="text-xs font-bold text-indigo-800">Role Name</div>
           <div class="text-sm">{{ viewRole.name || '—' }}</div>
@@ -285,29 +285,9 @@
             {{ viewRole.isActive === 'Y' ? 'Active' : 'Inactive' }}
           </div>
         </div>
-        <div class="md:col-span-2">
+        <div>
           <div class="text-xs font-bold text-indigo-800">Description</div>
           <div class="text-sm">{{ viewRole.description || '—' }}</div>
-        </div>
-      </div>
-
-      <!-- Permissions Display -->
-      <div class="border-t pt-4">
-        <div class="text-xs font-bold text-indigo-800 mb-3">
-          Permissions ({{ viewRole.permissions.length }})
-        </div>
-        <div class="space-y-3">
-          <div *ngFor="let group of getPermissionsByModuleForView(viewRole.permissions || [])" class="border rounded-lg p-3">
-            <div class="text-sm font-semibold text-gray-800 mb-2">{{ group.module }}</div>
-            <div class="flex flex-wrap gap-2">
-              <span *ngFor="let perm of group.permissions" class="px-2 py-1 text-xs bg-indigo-50 text-indigo-700 rounded">
-                {{ perm }}
-              </span>
-            </div>
-          </div>
-          <div *ngIf="!viewRole.permissions.length" class="text-sm text-gray-500 italic">
-            No permissions assigned
-          </div>
         </div>
       </div>
     </div>
