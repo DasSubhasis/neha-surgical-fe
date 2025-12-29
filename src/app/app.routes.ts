@@ -73,7 +73,7 @@ export const routes: Routes = [
       },
       {
         path: 'assistant-assignment',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/assistant-assignment/assistant-assignment.component').then(m => m.AssistantAssignmentComponent)
       },
       {
         path: 'material-transfer',
