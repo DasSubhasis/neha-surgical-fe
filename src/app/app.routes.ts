@@ -45,11 +45,11 @@ export const routes: Routes = [
         path: 'size',
         loadComponent: () => import('./components/size/size.component').then(m => m.SizeComponent)
       },
-      // Placeholder routes for pages not yet implemented
       {
         path: 'category',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/category/category.component').then(m => m.CategoryComponent)
       },
+      // Placeholder routes for pages not yet implemented
       {
         path: 'user',
         loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
