@@ -6,11 +6,12 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 import { DoctorComponent } from '../doctor/doctor.component';
 import { ItemComponent } from '../item/item.component';
+import { HospitalComponent } from '../hospital/hospital.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, HeaderComponent, SidebarComponent, BreadcrumbComponent, DoctorComponent, ItemComponent],
+  imports: [CommonModule, HeaderComponent, SidebarComponent, BreadcrumbComponent, DoctorComponent, ItemComponent, HospitalComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent implements OnInit {

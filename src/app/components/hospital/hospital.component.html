@@ -1,0 +1,461 @@
+<div class="p-2 md:p-2 h-full flex flex-col">
+  <!-- Header Row with Breadcrumb and Actions -->
+  <div class="flex flex-row justify-between items-center mb-2 md:mb-3 gap-2 min-h-0">
+    <div class="flex items-center">
+      <app-breadcrumb
+        [currentPage]="'hospital'"
+        (navigate)="onBreadcrumbNavigate($event)"
+      ></app-breadcrumb>
+    </div>
+    <div class="flex items-center">
+      <app-action-dropdown [actions]="actionItems"></app-action-dropdown>
+    </div>
+  </div>
+
+  <!-- AG Grid Container -->
+  <div class="flex-1 min-h-0 relative">
+    <!-- Loading Overlay -->
+    <div *ngIf="loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+      <div class="flex flex-col items-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p class="mt-3 text-sm text-gray-600">Loading hospitals...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="hasError && !loading" class="absolute inset-0 bg-white flex items-center justify-center z-10">
+      <div class="flex flex-col items-center max-w-md text-center p-6">
+        <div class="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Failed to Load Data</h3>
+        <p class="text-sm text-gray-600 mb-4">{{ errorMessage }}</p>
+        <button 
+          (click)="retryFetch()" 
+          class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- AG Grid -->
+    <ag-grid-angular
+      *ngIf="!hasError"
+      class="ag-theme-alpine h-full w-full"
+      style="min-height: 300px; height: calc(100vh - 130px);"
+      [rowData]="hospitals"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [pagination]="true"
+      [paginationPageSize]="10"
+      [paginationPageSizeSelector]="[10, 25, 50]"
+      [suppressRowClickSelection]="true"
+      [rowSelection]="'multiple'"
+      [animateRows]="true"
+      [suppressMenuHide]="true"
+      (gridReady)="onGridReady($event)"
+    ></ag-grid-angular>
+  </div>
+
+  <!-- Hidden file input for import -->
+  <input 
+    id="hospital-import-file" 
+    type="file" 
+    accept=".csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+    style="display: none;" 
+    (change)="handleFileSelected($event)" 
+  />
+
+  <!-- Create/Edit Modal -->
+  <div *ngIf="isModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-4">
+    <div class="relative w-full h-full bg-white rounded-none shadow-xl overflow-hidden flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div>
+              <h3 class="text-lg font-semibold text-white leading-6">
+                {{ editingHospital ? 'Edit Hospital' : 'Create New Hospital' }}
+              </h3>
+            </div>
+          </div>
+          <button 
+            (click)="handleCloseModal()" 
+            class="text-white hover:text-gray-200 transition-colors duration-200"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-4 space-y-3 overflow-y-auto flex-1">
+        <!-- Hospital Name and Status -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+          <div class="md:col-span-3">
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Hospital Name <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              [(ngModel)]="formData.name"
+              (ngModelChange)="onFormChange()"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+              placeholder="Enter hospital name" 
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <div class="flex items-center h-[42px]">
+              <button
+                type="button"
+                (click)="toggleStatus()"
+                class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                [class.bg-green-500]="formData.isActive === 'Y'"
+                [class.bg-gray-300]="formData.isActive !== 'Y'"
+              >
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200"
+                  [class.translate-x-6]="formData.isActive === 'Y'"
+                  [class.translate-x-1]="formData.isActive !== 'Y'"
+                ></span>
+              </button>
+              <span 
+                class="ml-2 text-sm font-medium"
+                [class.text-green-600]="formData.isActive === 'Y'"
+                [class.text-gray-500]="formData.isActive !== 'Y'"
+              >
+                {{ formData.isActive === 'Y' ? 'Active' : 'Inactive' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Address</label>
+          <input 
+            type="text" 
+            [(ngModel)]="formData.address"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+            placeholder="Address" 
+          />
+        </div>
+
+        <!-- Contact Persons Section -->
+        <div class="mt-4">
+          <div class="text-sm font-medium text-gray-700 mb-2">Contact Persons (Add one or more)</div>
+          <div class="grid grid-cols-1 md:grid-cols-5 gap-2 items-end">
+            <div class="md:col-span-1">
+              <input 
+                placeholder="Name" 
+                [(ngModel)]="newContact.name"
+                class="w-full px-2 py-1 border border-gray-300 rounded" 
+              />
+            </div>
+            <div>
+              <input 
+                placeholder="Mobile" 
+                maxlength="10"
+                [(ngModel)]="newContact.mobile"
+                (input)="sanitizeMobile()"
+                class="w-full px-2 py-1 border border-gray-300 rounded" 
+              />
+            </div>
+            <div>
+              <input 
+                placeholder="Email" 
+                [(ngModel)]="newContact.email"
+                class="w-full px-2 py-1 border border-gray-300 rounded" 
+              />
+            </div>
+            <div>
+              <input 
+                placeholder="Location" 
+                [(ngModel)]="newContact.location"
+                class="w-full px-2 py-1 border border-gray-300 rounded" 
+              />
+            </div>
+            <div class="flex items-center gap-2">
+              <input 
+                placeholder="Remarks" 
+                [(ngModel)]="newContact.remarks"
+                class="w-full px-2 py-1 border border-gray-300 rounded" 
+              />
+              <button 
+                type="button" 
+                (click)="addContact()"
+                class="px-3 py-1 bg-indigo-600 text-white rounded"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+
+          <!-- Contacts Table -->
+          <div class="border border-gray-300 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow duration-200 max-h-40 overflow-y-auto mt-3">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-300 text-black-700 border-b sticky top-0 z-10">
+                <tr>
+                  <th class="text-left py-2 px-2 font-medium">Name</th>
+                  <th class="text-left py-2 px-2 font-medium">Mobile</th>
+                  <th class="text-left py-2 px-2 font-medium">Email</th>
+                  <th class="text-left py-2 px-2 font-medium">Location</th>
+                  <th class="text-left py-2 px-2 font-medium">Remarks</th>
+                  <th class="text-right py-2 px-2 font-medium">Action</th>
+                </tr>
+              </thead>
+              <tbody class="bg-yellow-50">
+                <tr *ngFor="let contact of formData.contacts; let i = index" class="border-b last:border-b-0 hover:bg-gray-50 bg-grey-50">
+                  <td class="py-2 px-2">{{ contact.name }}</td>
+                  <td class="py-2 px-2">{{ contact.mobile }}</td>
+                  <td class="py-2 px-2">{{ contact.email || '-' }}</td>
+                  <td class="py-2 px-2">{{ contact.location || '-' }}</td>
+                  <td class="py-2 px-2">{{ contact.remarks || '-' }}</td>
+                  <td class="py-2 px-2 text-right">
+                    <button 
+                      (click)="removeContact(i)" 
+                      class="text-red-600 hover:text-red-900 px-2 py-1 rounded" 
+                      title="Delete"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+                <tr *ngIf="formData.contacts.length === 0">
+                  <td colspan="6" class="py-3 px-2 text-center text-gray-500">No contact persons added</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Inline Matches Warning -->
+        <div *ngIf="inlineMatches.length > 0" class="bg-yellow-50 border border-yellow-200 p-3 rounded">
+          <div class="font-semibold text-sm">Possible matches found:</div>
+          <ul class="mt-2 text-sm">
+            <li *ngFor="let m of inlineMatches">
+              {{ m.name }} — {{ m.contactNo }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 flex-shrink-0">
+        <button 
+          (click)="handleCloseModal()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          (click)="handleSaveHospital()" 
+          [disabled]="isSaveDisabled()"
+          class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+          [class.opacity-50]="isSaveDisabled()"
+          [class.cursor-not-allowed]="isSaveDisabled()"
+        >
+          {{ editingHospital ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Preview Modal -->
+  <div *ngIf="importPreviewOpen" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-4">
+    <div class="relative w-full h-full bg-white mx-auto rounded-xl shadow-2xl overflow-auto" style="max-height: 80vh;">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex justify-between items-center">
+        <h3 class="text-white text-lg font-semibold">Import Preview</h3>
+        <button 
+          (click)="closeImportPreview()" 
+          class="text-white hover:text-gray-200"
+        >
+          ✕
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-4">
+        <div class="mb-3 text-sm">Rows highlighted indicate duplicates (either with existing data or within the file). Choose action per row.</div>
+        <div class="space-y-2">
+          <div 
+            *ngFor="let item of importRows" 
+            class="p-3 border rounded"
+            [class.bg-yellow-50]="item.isDuplicate"
+            [class.border-yellow-200]="item.isDuplicate"
+            [class.bg-white]="!item.isDuplicate"
+          >
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-semibold">
+                  Row {{ item.index }}: 
+                  <span *ngIf="item.row.name">{{ item.row.name }}</span>
+                  <em *ngIf="!item.row.name" class="text-gray-400">(missing name)</em>
+                </div>
+                <div class="text-sm text-gray-600">
+                  Contact: {{ item.row.contactNo }} | Contact Person: {{ item.row.contactPerson }}
+                </div>
+                <div *ngIf="item.duplicateAgainst.length > 0" class="text-xs text-red-700 mt-1">
+                  Duplicates: {{ item.duplicateAgainst.join(', ') }}
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <select 
+                  [value]="item.action" 
+                  (change)="toggleImportAction(item.index, $any($event.target).value)"
+                  class="px-2 py-1 border rounded"
+                >
+                  <option value="add">Add</option>
+                  <option value="merge">Merge</option>
+                  <option value="skip">Skip</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3">
+        <button 
+          (click)="closeImportPreview()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          (click)="commitImport()" 
+          class="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+        >
+          Commit Import
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Hospital Modal -->
+  <div *ngIf="viewHospital" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-2">
+    <div class="relative w-full h-full mx-auto bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-white">Hospital Details</h3>
+        <button 
+          (click)="closeViewHospital()" 
+          class="text-white hover:text-gray-200 transition-colors duration-200"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-4 space-y-3 overflow-y-auto flex-1">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs font-bold text-indigo-800">Name</div>
+            <div class="text-sm">{{ viewHospital.name }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800">Address</div>
+            <div class="text-sm">{{ viewHospital.address }}</div>
+          </div>
+
+          <!-- Contact Persons Table -->
+          <div *ngIf="viewHospital.contacts && viewHospital.contacts.length > 0" class="md:col-span-2 mt-4">
+            <div class="text-xs font-bold text-indigo-800 mb-2">Contact Persons</div>
+            <div class="border border-gray-200 rounded">
+              <table class="w-full text-sm">
+                <thead class="bg-gray-50 text-gray-700 border-b">
+                  <tr>
+                    <th class="text-left py-2 px-2 font-medium">Name</th>
+                    <th class="text-left py-2 px-2 font-medium">Mobile</th>
+                    <th class="text-left py-2 px-2 font-medium">Email</th>
+                    <th class="text-left py-2 px-2 font-medium">Location</th>
+                    <th class="text-left py-2 px-2 font-medium">Remarks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let c of viewHospital.contacts" class="border-b last:border-b-0 hover:bg-gray-50">
+                    <td class="py-2 px-2">{{ c.name }}</td>
+                    <td class="py-2 px-2">{{ c.mobile }}</td>
+                    <td class="py-2 px-2">{{ c.email || '-' }}</td>
+                    <td class="py-2 px-2">{{ c.location || '-' }}</td>
+                    <td class="py-2 px-2">{{ c.remarks || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 p-4 flex justify-end">
+        <button 
+          (click)="closeViewHospital()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div *ngIf="showDeleteConfirm" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-4">
+    <div class="relative w-full max-w-md mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-red-600 to-red-700 px-6 py-4 flex-shrink-0">
+        <h3 class="text-lg font-semibold text-white">Delete Hospital?</h3>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6">
+        <div class="flex items-center space-x-4">
+          <div class="flex-shrink-0">
+            <div class="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center">
+              <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">
+              Are you sure you want to delete <strong>{{ hospitalToDelete?.name }}</strong>? 
+              This action cannot be undone.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3">
+        <button 
+          (click)="cancelDelete()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          (click)="handleDeleteHospital()" 
+          class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors duration-200"
+        >
+          Yes, delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
