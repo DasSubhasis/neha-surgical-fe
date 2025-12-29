@@ -6,12 +6,17 @@ import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
+import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-dropdown.component';
 import { ItemService, Item, ItemFormData } from '../../services/item.service';
+import { CategoryService, Category } from '../../services/category.service';
+import { BrandService, Brand } from '../../services/brand.service';
+import { SizeService, Size } from '../../services/size.service';
+import { SpecificationService, Specification } from '../../services/specification.service';
 
 @Component({
   selector: 'app-item',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridModule, BreadcrumbComponent, ActionDropdownComponent],
+  imports: [CommonModule, FormsModule, AgGridModule, BreadcrumbComponent, ActionDropdownComponent, SearchableDropdownComponent],
   templateUrl: './item.component.html',
   styles: [`
     :host ::ng-deep .ag-header-small-font .ag-header-cell-label {
@@ -60,8 +65,10 @@ export class ItemComponent implements OnInit {
   };
 
   // Dropdown options
-  groupOptions: string[] = [];
-  categoryOptions: string[] = [];
+  groupOptions: Brand[] = [];
+  categoryOptions: Category[] = [];
+  sizeOptions: Size[] = [];
+  specificationOptions: Specification[] = [];
 
   // AG Grid column definitions
   columnDefs: ColDef[] = [
@@ -162,12 +169,21 @@ export class ItemComponent implements OnInit {
 
   constructor(
     private itemService: ItemService,
+    private categoryService: CategoryService,
+    private brandService: BrandService,
+    private sizeService: SizeService,
+    private specificationService: SpecificationService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
     // Load items
     this.fetchItems();
+    // Load dropdown options
+    this.fetchCategories();
+    this.fetchBrands();
+    this.fetchSizes();
+    this.fetchSpecifications();
   }
 
   onGridReady(params: GridReadyEvent): void {
@@ -185,7 +201,7 @@ export class ItemComponent implements OnInit {
     this.hasError = false;
     this.errorMessage = '';
     
-    this.itemService.getAllItems('Y').subscribe({
+    this.itemService.getAllItems(true).subscribe({
       next: (response) => {
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
         this.items = data.map((item: any) => ({
@@ -202,6 +218,78 @@ export class ItemComponent implements OnInit {
         this.loading = false;
         this.hasError = true;
         this.errorMessage = 'Failed to fetch items.';
+      }
+    });
+  }
+
+  fetchCategories(): void {
+    this.categoryService.getAllCategories('Y').subscribe({
+      next: (response) => {
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.categoryOptions = data.map((cat: any) => ({
+          id: cat.categoryId || cat.id,
+          name: cat.name,
+          status: cat.isActive === 'Y' ? 'Active' : 'Inactive',
+          isActive: cat.isActive
+        }));
+      },
+      error: (error) => {
+        console.error('Failed to fetch categories:', error);
+        this.categoryOptions = [];
+      }
+    });
+  }
+
+  fetchBrands(): void {
+    this.brandService.getAllBrands(true).subscribe({
+      next: (response) => {
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.groupOptions = data.map((brand: any) => ({
+          id: brand.brandId || brand.id,
+          name: brand.name,
+          status: brand.isActive === 'Y' ? 'Active' : 'Inactive',
+          isActive: brand.isActive
+        }));
+      },
+      error: (error) => {
+        console.error('Failed to fetch brands:', error);
+        this.groupOptions = [];
+      }
+    });
+  }
+
+  fetchSizes(): void {
+    this.sizeService.getAllSizes('Y').subscribe({
+      next: (response) => {
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.sizeOptions = data.map((size: any) => ({
+          id: size.sizeId || size.id,
+          name: size.name,
+          status: size.isActive === 'Y' ? 'Active' : 'Inactive',
+          isActive: size.isActive
+        }));
+      },
+      error: (error) => {
+        console.error('Failed to fetch sizes:', error);
+        this.sizeOptions = [];
+      }
+    });
+  }
+
+  fetchSpecifications(): void {
+    this.specificationService.getAllSpecifications('Y').subscribe({
+      next: (response) => {
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.specificationOptions = data.map((spec: any) => ({
+          id: spec.specificationId || spec.id,
+          name: spec.name,
+          status: spec.isActive === 'Y' ? 'Active' : 'Inactive',
+          isActive: spec.isActive
+        }));
+      },
+      error: (error) => {
+        console.error('Failed to fetch specifications:', error);
+        this.specificationOptions = [];
       }
     });
   }
@@ -418,6 +506,29 @@ export class ItemComponent implements OnInit {
         }
       });
     }
+  }
+
+  validatePrice(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    let value = input.value;
+    
+    // Remove negative sign if present
+    if (value.startsWith('-')) {
+      value = value.substring(1);
+      input.value = value;
+    }
+    
+    // Ensure only two decimal places
+    if (value.includes('.')) {
+      const parts = value.split('.');
+      if (parts[1] && parts[1].length > 2) {
+        value = parts[0] + '.' + parts[1].substring(0, 2);
+        input.value = value;
+      }
+    }
+    
+    // Update the form data with the current value
+    this.formData.price = input.value;
   }
 
   toggleStatus(): void {

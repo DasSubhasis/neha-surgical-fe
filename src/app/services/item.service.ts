@@ -75,8 +75,8 @@ export class ItemService {
   /**
    * Get all items from API
    */
-  getAllItems(isActive: string = 'Y'): Observable<Item[]> {
-    const endpoint = ENDPOINTS.ITEMS.LIST(isActive === 'Y');
+  getAllItems(isActive: boolean = true): Observable<Item[]> {
+    const endpoint = ENDPOINTS.ITEMS.LIST(isActive);
     return this.apiService.get<Item[]>(endpoint);
   }
 
@@ -98,7 +98,11 @@ export class ItemService {
    * Update an existing item
    */
   updateItem(id: number, data: ItemFormData): Observable<Item> {
-    return this.apiService.put<Item>(ENDPOINTS.ITEMS.UPDATE(id), data);
+    const payload = {
+      itemId: id,
+      ...data
+    };
+    return this.apiService.put<Item>(ENDPOINTS.ITEMS.UPDATE(id), payload);
   }
 
   /**

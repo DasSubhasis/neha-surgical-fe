@@ -108,7 +108,7 @@ export const ENDPOINTS = {
   // Item Management
   ITEMS: {
     BASE: '/Items',
-    LIST: (isActive?: boolean) => `/Items${isActive !== undefined ? `?isActive=${isActive}` : ''}`,
+    LIST: (isActive?: boolean) => `/Items${isActive !== undefined ? `?isActive=${isActive ? 'Y' : 'N'}` : ''}`,
     GET: (id: string | number) => `/Items/${id}`,
     CREATE: '/Items',
     UPDATE: (id: string | number) => `/Items/${id}`,
