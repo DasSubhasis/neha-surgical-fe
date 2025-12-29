@@ -38,7 +38,8 @@ export class SidebarComponent {
         { key: 'specification', label: 'Specification', icon: 'list' },
         { key: 'size', label: 'Size', icon: 'ruler' },
         { key: 'category', label: 'Category', icon: 'folder' },
-        { key: 'user', label: 'User', icon: 'users' }
+        { key: 'user', label: 'User', icon: 'users' },
+        { key: 'role', label: 'Role', icon: 'shield' }
       ]
     },
     {

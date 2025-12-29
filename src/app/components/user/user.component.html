@@ -1,0 +1,394 @@
+<div class="p-2 md:p-2 h-full flex flex-col">
+  <!-- Header Row with Breadcrumb and Actions -->
+  <div class="flex flex-row justify-between items-center mb-2 md:mb-3 gap-2 min-h-0">
+    <app-breadcrumb
+      [currentPage]="'user'"
+      (navigate)="onBreadcrumbNavigate($event)"
+    ></app-breadcrumb>
+    <app-action-dropdown [actions]="actionItems"></app-action-dropdown>
+  </div>
+
+  <!-- AG Grid Container -->
+  <div class="flex-1 min-h-0 relative">
+    <!-- Loading Overlay -->
+    <div *ngIf="loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+      <div class="flex flex-col items-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p class="mt-3 text-sm text-gray-600">Loading users...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="hasError && !loading" class="absolute inset-0 bg-white flex items-center justify-center z-10">
+      <div class="flex flex-col items-center max-w-md text-center p-6">
+        <div class="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Failed to Load Data</h3>
+        <p class="text-sm text-gray-600 mb-4">{{ errorMessage }}</p>
+        <button 
+          (click)="retryFetch()" 
+          class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- AG Grid -->
+    <ag-grid-angular
+      *ngIf="!hasError"
+      class="ag-theme-alpine h-full w-full"
+      style="min-height: 300px; height: calc(100vh - 130px);"
+      [rowData]="users"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [pagination]="true"
+      [paginationPageSize]="10"
+      [paginationPageSizeSelector]="[10, 25, 50]"
+      [suppressRowClickSelection]="true"
+      [rowSelection]="'multiple'"
+      [animateRows]="true"
+      [suppressMenuHide]="true"
+      (gridReady)="onGridReady($event)"
+    ></ag-grid-angular>
+  </div>
+
+  <!-- Hidden file input for import -->
+  <input 
+    id="user-import-file" 
+    type="file" 
+    accept=".csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" 
+    style="display: none" 
+    (change)="handleFileSelected($event)" 
+  />
+</div>
+
+<!-- Create/Edit Modal -->
+<div *ngIf="isModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-4">
+  <div class="relative w-full max-w-2xl bg-white rounded-none shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+    <!-- Modal Header -->
+    <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div>
+            <h3 class="text-lg font-semibold text-white leading-6">
+              {{ editingUser ? 'Edit User' : 'Create New User' }}
+            </h3>
+          </div>
+        </div>
+        <button (click)="handleCloseModal()" class="text-white hover:text-gray-200 transition-colors duration-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+      <!-- Username and Status -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Username <span class="text-red-500">*</span>
+          </label>
+          <input 
+            type="text" 
+            [(ngModel)]="formData.username"
+            (ngModelChange)="onFormChange()"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+            placeholder="Enter username" 
+          />
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+          <div class="flex items-center h-[42px]">
+            <button
+              type="button"
+              (click)="toggleStatus()"
+              [class]="formData.isActive === 'Y' 
+                ? 'relative inline-flex h-6 w-11 items-center rounded-full bg-green-500 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'
+                : 'relative inline-flex h-6 w-11 items-center rounded-full bg-gray-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2'"
+            >
+              <span
+                [class]="formData.isActive === 'Y'
+                  ? 'inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 translate-x-6'
+                  : 'inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 translate-x-1'"
+              ></span>
+            </button>
+            <span [class]="formData.isActive === 'Y' ? 'ml-2 text-sm font-medium text-green-600' : 'ml-2 text-sm font-medium text-gray-500'">
+              {{ formData.isActive === 'Y' ? 'Active' : 'Inactive' }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Full Name and Email -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Full Name <span class="text-red-500">*</span>
+          </label>
+          <input 
+            type="text" 
+            [(ngModel)]="formData.fullName"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+            placeholder="Enter full name" 
+          />
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Email <span class="text-red-500">*</span>
+          </label>
+          <input 
+            type="email" 
+            [(ngModel)]="formData.email"
+            (ngModelChange)="onFormChange()"
+            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            [class.border-red-500]="formData.email && !isEmailValid()"
+            [class.border-gray-300]="!formData.email || isEmailValid()"
+            placeholder="Enter email" 
+          />
+          <p *ngIf="formData.email && !isEmailValid()" class="mt-1 text-xs text-red-500">Please enter a valid email</p>
+        </div>
+      </div>
+
+      <!-- Phone and Role -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+          <input 
+            type="text" 
+            [(ngModel)]="formData.phone"
+            maxlength="10"
+            class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            [class.border-red-500]="formData.phone && !isPhoneValid()"
+            [class.border-gray-300]="!formData.phone || isPhoneValid()"
+            placeholder="Enter phone number" 
+          />
+          <p *ngIf="formData.phone && !isPhoneValid()" class="mt-1 text-xs text-red-500">Enter valid 10-digit mobile number</p>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Role <span class="text-red-500">*</span>
+          </label>
+          <select 
+            [(ngModel)]="formData.roleId"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+          >
+            <option [ngValue]="0" disabled>Select a role</option>
+            <option *ngFor="let role of roles" [ngValue]="role.id">{{ role.name }}</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Inline Matches Warning -->
+      <div *ngIf="inlineMatches.length > 0" class="bg-yellow-50 border border-yellow-200 p-3 rounded">
+        <div class="font-semibold text-sm">Possible matches found:</div>
+        <ul class="mt-2 text-sm">
+          <li *ngFor="let match of inlineMatches">{{ match.username }} — {{ match.email }} ({{ match.roleName }})</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 flex-shrink-0">
+      <button 
+        (click)="handleCloseModal()" 
+        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+      >
+        Cancel
+      </button>
+      <button 
+        (click)="handleSaveUser()" 
+        [disabled]="isSaveDisabled()"
+        [class]="isSaveDisabled() 
+          ? 'px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg opacity-50 cursor-not-allowed'
+          : 'px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200'"
+      >
+        {{ editingUser ? 'Update' : 'Create' }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- View User Modal -->
+<div *ngIf="viewUser" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-2">
+  <div class="relative w-full max-w-lg mx-auto bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col">
+    <!-- Modal Header -->
+    <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0 flex justify-between items-center">
+      <h3 class="text-lg font-semibold text-white">User Details</h3>
+      <button (click)="closeViewUser()" class="text-white hover:text-gray-200 transition-colors duration-200">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="px-6 py-4 space-y-4 overflow-y-auto flex-1">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs font-bold text-indigo-800">Username</div>
+          <div class="text-sm">{{ viewUser.username || '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-indigo-800">Full Name</div>
+          <div class="text-sm">{{ viewUser.fullName || '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-indigo-800">Email</div>
+          <div class="text-sm">{{ viewUser.email || '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-indigo-800">Phone</div>
+          <div class="text-sm">{{ viewUser.phone || '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-indigo-800">Role</div>
+          <div class="text-sm">
+            <span class="px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+              {{ viewUser.roleName || '—' }}
+            </span>
+          </div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-indigo-800">Status</div>
+          <div [class]="viewUser.isActive === 'Y' ? 'text-sm font-bold text-green-700' : 'text-sm font-bold text-gray-500'">
+            {{ viewUser.isActive === 'Y' ? 'Active' : 'Inactive' }}
+          </div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-indigo-800">Created At</div>
+          <div class="text-sm">{{ viewUser.createdAt || '—' }}</div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-indigo-800">Last Login</div>
+          <div class="text-sm">{{ viewUser.lastLogin || '—' }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="bg-gray-50 p-4 flex justify-end">
+      <button 
+        (click)="closeViewUser()" 
+        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+      >
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div *ngIf="showDeleteConfirm" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-4">
+  <div class="relative w-full max-w-sm mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
+    <div class="p-6 text-center">
+      <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+        <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </div>
+      <h3 class="text-lg font-semibold text-gray-900 mb-2">Delete User?</h3>
+      <p class="text-sm text-gray-600 mb-6">
+        Delete <span class="font-semibold">{{ userToDelete?.fullName }}</span> ({{ userToDelete?.username }})? This can't be undone.
+      </p>
+      <div class="flex justify-center gap-3">
+        <button
+          (click)="cancelDelete()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button
+          (click)="handleDeleteUser()"
+          class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors duration-200"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Import Preview Modal -->
+<div *ngIf="importPreviewOpen" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-4">
+  <div class="relative w-full h-full bg-white mx-auto rounded-xl shadow-2xl overflow-auto" style="max-height: 80vh;">
+    <!-- Modal Header -->
+    <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex justify-between items-center sticky top-0">
+      <h3 class="text-lg font-semibold text-white">Import Preview</h3>
+      <button (click)="closeImportPreview()" class="text-white hover:text-gray-200">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-4">
+      <div class="mb-3 text-sm text-gray-600">
+        Rows highlighted indicate duplicates (either with existing data or within the file). Choose action per row.
+        <span *ngIf="getDuplicateCount() > 0" class="ml-2 text-yellow-600 font-medium">
+          ({{ getDuplicateCount() }} duplicates found)
+        </span>
+      </div>
+      <div class="space-y-2">
+        <div 
+          *ngFor="let item of importRows" 
+          [class]="item.isDuplicate ? 'p-3 border rounded bg-yellow-50 border-yellow-200' : 'p-3 border rounded bg-white'"
+        >
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-semibold">
+                Row {{ item.index }}: 
+                <span *ngIf="item.row.username">{{ item.row.username }}</span>
+                <em *ngIf="!item.row.username" class="text-gray-400">(missing username)</em>
+              </div>
+              <div class="text-sm text-gray-600">
+                {{ item.row.fullName }} | {{ item.row.email }} | Role: {{ item.row.roleName || 'N/A' }}
+              </div>
+              <div *ngIf="item.duplicateAgainst.length > 0" class="text-xs text-red-700 mt-1">
+                Duplicates: {{ item.duplicateAgainst.join(', ') }}
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <select 
+                [value]="item.action" 
+                (change)="toggleImportAction(item.index, $any($event.target).value)"
+                class="px-2 py-1 border rounded text-sm"
+              >
+                <option value="add">Add</option>
+                <option value="merge">Merge</option>
+                <option value="skip">Skip</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="bg-gray-50 px-6 py-4 flex justify-end gap-3 sticky bottom-0">
+      <button 
+        (click)="closeImportPreview()" 
+        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+      >
+        Cancel
+      </button>
+      <button 
+        (click)="commitImport()" 
+        class="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors duration-200"
+      >
+        Commit Import
+      </button>
+    </div>
+  </div>
+</div>

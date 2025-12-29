@@ -49,11 +49,15 @@ export const routes: Routes = [
         path: 'category',
         loadComponent: () => import('./components/category/category.component').then(m => m.CategoryComponent)
       },
-      // Placeholder routes for pages not yet implemented
+      {
+        path: 'role',
+        loadComponent: () => import('./components/role/role.component').then(m => m.RoleComponent)
+      },
       {
         path: 'user',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/user/user.component').then(m => m.UserComponent)
       },
+      // Placeholder routes for pages not yet implemented
       {
         path: 'order-entry',
         loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
