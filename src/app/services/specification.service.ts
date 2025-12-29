@@ -38,7 +38,7 @@ export class SpecificationService {
    * Get all specifications
    */
   getAllSpecifications(isActive: boolean = true): Observable<Specification[]> {
-    const endpoint = `/Specifications${isActive !== undefined ? `?isActive=${isActive}` : ''}`;
+    const endpoint = `/Specifications${isActive ? '?isActive=Y' : ''}`;
     return this.apiService.get<Specification[]>(endpoint);
   }
 
@@ -66,6 +66,7 @@ export class SpecificationService {
    */
   updateSpecification(id: number, specificationData: SpecificationFormData): Observable<ApiResponse> {
     const payload = {
+      specificationId: id,
       name: specificationData.name,
       isActive: specificationData.isActive || 'Y'
     };
