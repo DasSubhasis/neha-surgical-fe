@@ -1,0 +1,437 @@
+<div class="p-2 md:p-2 h-full flex flex-col">
+  <!-- Header Row with Breadcrumb and Actions -->
+  <div class="flex flex-row justify-between items-center mb-2 md:mb-3 gap-2 min-h-0">
+    <div class="flex items-center">
+      <app-breadcrumb
+        [currentPage]="'order-entry'"
+        (navigate)="onBreadcrumbNavigate($event)"
+      ></app-breadcrumb>
+    </div>
+    <div class="flex items-center">
+      <app-action-dropdown [actions]="actionItems"></app-action-dropdown>
+    </div>
+  </div>
+
+  <!-- AG Grid Container -->
+  <div class="flex-1 min-h-0 relative">
+    <!-- Loading Overlay -->
+    <div *ngIf="loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+      <div class="flex flex-col items-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p class="mt-3 text-sm text-gray-600">Loading orders...</p>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div *ngIf="hasError && !loading" class="absolute inset-0 bg-white flex items-center justify-center z-10">
+      <div class="flex flex-col items-center max-w-md text-center p-6">
+        <div class="h-16 w-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+          <svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Failed to Load Data</h3>
+        <p class="text-sm text-gray-600 mb-4">{{ errorMessage }}</p>
+        <button 
+          (click)="retryFetch()" 
+          class="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+        >
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Retry
+        </button>
+      </div>
+    </div>
+
+    <!-- AG Grid -->
+    <ag-grid-angular
+      *ngIf="!hasError"
+      class="ag-theme-alpine h-full w-full"
+      style="min-height: 300px; height: calc(100vh - 130px);"
+      [rowData]="orders"
+      [columnDefs]="columnDefs"
+      [defaultColDef]="defaultColDef"
+      [pagination]="true"
+      [paginationPageSize]="10"
+      [paginationPageSizeSelector]="[10, 25, 50]"
+      [suppressRowClickSelection]="true"
+      [rowSelection]="'multiple'"
+      [animateRows]="true"
+      [suppressMenuHide]="true"
+      (gridReady)="onGridReady($event)"
+    ></ag-grid-angular>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div *ngIf="isModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-30 z-50 flex items-center justify-center p-2">
+    <div class="relative w-full h-full bg-white rounded-none shadow-xl overflow-hidden flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div>
+              <h3 class="text-lg font-semibold text-white leading-6">
+                {{ editingOrder ? 'Edit Order' : 'Create New Order' }}
+              </h3>
+            </div>
+          </div>
+          <button 
+            (click)="handleCloseModal()" 
+            class="text-white hover:text-gray-200 transition-colors duration-200"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-4 space-y-3 overflow-y-auto flex-1">
+        <!-- Order Details Row 1 -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Order No <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="text" 
+              [(ngModel)]="formData.orderNo"
+              class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Order Date</label>
+            <input 
+              type="date" 
+              [(ngModel)]="formData.orderDate"
+              class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Operation Date <span class="text-red-500">*</span>
+            </label>
+            <input 
+              type="date" 
+              [(ngModel)]="formData.operationDate"
+              (ngModelChange)="onOperationDateChange()"
+              class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Operation Time</label>
+            <input 
+              type="time" 
+              [(ngModel)]="formData.operationTime"
+              class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Material Send Date</label>
+            <input 
+              type="date" 
+              [(ngModel)]="formData.materialSendDate"
+              class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+            />
+          </div>
+        </div>
+
+        <!-- Doctor, Hospital, Item Groups Row -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Doctor <span class="text-red-500">*</span>
+            </label>
+            <select 
+              [(ngModel)]="formData.doctorId"
+              class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            >
+              <option [ngValue]="null">Select Doctor</option>
+              <option *ngFor="let doctor of doctors" [ngValue]="doctor.id">{{ doctor.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+              Hospital <span class="text-red-500">*</span>
+            </label>
+            <select 
+              [(ngModel)]="formData.hospitalId"
+              class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            >
+              <option [ngValue]="null">Select Hospital</option>
+              <option *ngFor="let hospital of hospitals" [ngValue]="hospital.id">{{ hospital.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Item Groups</label>
+            <select 
+              [(ngModel)]="selectedGroupIds"
+              (ngModelChange)="onGroupSelectionChange()"
+              multiple
+              class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+              style="min-height: 42px;"
+            >
+              <option *ngFor="let group of itemGroups" [value]="group.id">{{ group.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Items Summary -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Items Summary</label>
+          <div class="border border-gray-300 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow duration-200 max-h-50 overflow-y-auto">
+            <table *ngIf="itemsSummary.length > 0" class="w-full text-sm">
+              <thead class="bg-gray-300 text-black-700 border-b sticky top-0 z-10">
+                <tr>
+                  <th class="text-left py-2 px-2 font-medium">Item / Group</th>
+                  <th class="text-left py-2 px-2 font-medium">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-yellow-50">
+                <tr *ngFor="let item of itemsSummary" class="border-b last:border-b-0 hover:bg-gray-50">
+                  <td class="py-2 px-2">
+                    {{ item.name }}
+                    <span *ngIf="item.manual" class="text-xs text-indigo-600 ml-1">(manual)</span>
+                  </td>
+                  <td class="text-right pr-1 flex justify-end gap-2 py-2 px-2">
+                    <!-- View button for groups -->
+                    <button
+                      *ngIf="item.isGroup && !item.manual"
+                      (click)="viewGroupItems(item.id)"
+                      class="text-blue-600 hover:text-blue-800 p-1"
+                      title="View Items"
+                    >
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                    <!-- Remove button -->
+                    <button
+                      (click)="removeSummaryItem(item.id)"
+                      class="text-red-600 hover:text-red-900 p-1"
+                      title="Remove"
+                    >
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div *ngIf="itemsSummary.length === 0" class="text-sm text-gray-500 p-1">No items selected</div>
+          </div>
+
+          <!-- Manual Item Add Section -->
+          <div class="mt-3 flex gap-2">
+            <input
+              type="text"
+              [(ngModel)]="newItemName"
+              placeholder="Add additional item"
+              class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500"
+            />
+            <button
+              (click)="addManualItem()"
+              class="w-8 h-8 flex items-center justify-center bg-blue-500 hover:bg-blue-600 text-white rounded-full shadow"
+              title="Add Item"
+            >
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Remarks -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+          <textarea 
+            [(ngModel)]="formData.remarks"
+            maxlength="250"
+            class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200 h-16"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 px-6 py-3 flex justify-end space-x-3 flex-shrink-0">
+        <button 
+          (click)="handleCloseModal()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          (click)="handleSaveOrder()" 
+          class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+        >
+          {{ editingOrder ? 'Update' : 'Create' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Order Modal -->
+  <div *ngIf="viewOrder" class="fixed inset-0 bg-gray-900 bg-opacity-30 z-50 flex items-center justify-center p-2">
+    <div class="relative w-full h-full bg-white rounded-none shadow-xl overflow-hidden flex flex-col">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-white">Order Details</h3>
+        <button (click)="closeViewOrder()" class="text-white hover:text-gray-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 flex-1 overflow-y-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Order No</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewOrder.orderNo }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Order Date</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewOrder.orderDate }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Doctor</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewOrder.doctorName }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Hospital</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewOrder.hospitalName }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Operation</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewOrder.operationDate }} {{ viewOrder.operationTime }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Material Send Date</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewOrder.materialSendDate }}</div>
+          </div>
+          <div class="md:col-span-2">
+            <div class="text-xs font-bold text-indigo-800 mb-2">Items Summary</div>
+            <div class="border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow duration-200 max-h-50 overflow-y-auto">
+              <table *ngIf="viewOrder.items && viewOrder.items.length > 0" class="w-full text-sm">
+                <thead class="bg-gray-300 text-black-700 border-b sticky top-0 z-10">
+                  <tr>
+                    <th class="text-left py-2 px-2 font-medium">Item / Group</th>
+                    <th class="text-right py-2 px-4 font-medium">Type</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-yellow-50">
+                  <tr *ngFor="let item of viewOrder.items" class="border-b last:border-b-0 hover:bg-gray-50">
+                    <td class="py-2 px-2">{{ item.name }}</td>
+                    <td class="py-2 px-2 text-right text-xs text-gray-600">
+                      <span *ngIf="item.manual" class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">Manual</span>
+                      <span *ngIf="!item.manual" class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Auto</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <div *ngIf="!viewOrder.items || viewOrder.items.length === 0" class="text-sm text-gray-500 p-3 text-center">
+                No items available
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Status</div>
+            <div class="text-base font-bold" 
+                 [class.text-yellow-700]="viewOrder.status === 'Draft'"
+                 [class.text-green-700]="viewOrder.status === 'Sent'"
+                 [class.text-gray-700]="viewOrder.status !== 'Draft' && viewOrder.status !== 'Sent'">
+              {{ viewOrder.status }}
+            </div>
+          </div>
+          <div *ngIf="viewOrder.remarks">
+            <div class="text-xs font-bold text-indigo-800 mb-1">Remarks</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewOrder.remarks }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="bg-gray-50 px-6 py-4 flex justify-end">
+        <button 
+          (click)="closeViewOrder()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Items Modal -->
+  <div *ngIf="viewGroupItemsData" class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-4">
+    <div class="relative w-full max-w-md mx-auto bg-white rounded-xl shadow-2xl overflow-hidden">
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-white">{{ viewGroupItemsData.name }}</h3>
+        <button (click)="closeGroupItemsModal()" class="text-white hover:text-gray-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-6">
+        <div class="space-y-2">
+          <div *ngFor="let item of viewGroupItemsData.items" 
+               class="flex items-center px-3 py-2 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition">
+            <svg class="w-4 h-4 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="text-sm font-medium text-gray-700">{{ item.name }}</span>
+          </div>
+          <div *ngIf="!viewGroupItemsData.items || viewGroupItemsData.items.length === 0" 
+               class="text-sm text-gray-500 p-3 text-center">
+            No items in this group
+          </div>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-6 py-4 flex justify-end">
+        <button 
+          (click)="closeGroupItemsModal()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div *ngIf="showDeleteConfirm" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm">
+      <div class="p-6 text-center">
+        <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-red-100 flex items-center justify-center">
+          <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Delete Order</h3>
+        <p class="text-sm text-gray-600 mb-6">
+          Are you sure you want to delete order <span class="font-medium text-gray-900">"{{ orderToDelete?.orderNo }}"</span>? This action cannot be undone.
+        </p>
+        <div class="flex justify-center gap-3">
+          <button
+            (click)="cancelDelete()"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            (click)="handleDeleteOrder()"
+            class="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

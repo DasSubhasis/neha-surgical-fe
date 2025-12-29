@@ -61,11 +61,12 @@ export const routes: Routes = [
         path: 'menu',
         loadComponent: () => import('./components/menu/menu.component').then(m => m.MenuComponent)
       },
-      // Placeholder routes for pages not yet implemented
+      // Order Entry (implemented)
       {
         path: 'order-entry',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/order-entry/order-entry.component').then(m => m.OrderEntryComponent)
       },
+      // Placeholder routes for pages not yet implemented
       {
         path: 'order-reminder',
         loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
