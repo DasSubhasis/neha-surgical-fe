@@ -1,6 +1,7 @@
 import { Component, OnInit, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
@@ -159,7 +160,10 @@ export class ItemComponent implements OnInit {
     ]
   ];
 
-  constructor(private itemService: ItemService) {}
+  constructor(
+    private itemService: ItemService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     // Load dropdown options
@@ -424,7 +428,7 @@ export class ItemComponent implements OnInit {
   }
 
   onBreadcrumbNavigate(page: string): void {
-    this.navigate.emit(page);
+    this.router.navigate(['/' + page]);
   }
 
   closeViewItem(): void {

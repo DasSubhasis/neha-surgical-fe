@@ -1,0 +1,48 @@
+<div class="h-screen bg-blue-50 flex overflow-hidden">
+  <!-- Sidebar - Desktop -->
+  <div class="hidden lg:block lg:w-64 lg:flex-shrink-0">
+    <app-sidebar
+      [isOpen]="sidebarOpen"
+      (toggle)="toggleSidebar()"
+      (pageChange)="onPageChange($event)"
+    ></app-sidebar>
+  </div>
+
+  <!-- Sidebar - Mobile -->
+  <div class="lg:hidden">
+    <app-sidebar
+      [isOpen]="sidebarOpen"
+      (toggle)="toggleSidebar()"
+      (pageChange)="onPageChange($event)"
+    ></app-sidebar>
+  </div>
+
+  <!-- Main Content Area -->
+  <div class="flex-1 flex flex-col">
+    <!-- Header -->
+    <app-header
+      [email]="currentUser?.email || ''"
+      (logout)="logout()"
+      (toggleSidebar)="toggleSidebar()"
+      (navigate)="onNavigate($event)"
+    ></app-header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-0">
+      <div class="h-full">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-red-50 border-t border-red-200 py-1 flex-shrink-0">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center">
+          <p class="text-xs text-red-700">
+            © 2025 Neha Surgical | All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  </div>
+</div>

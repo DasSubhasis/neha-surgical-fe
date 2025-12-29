@@ -1,114 +1,28 @@
-<div class="h-screen bg-blue-50 flex overflow-hidden">
-  <!-- Sidebar - Desktop -->
-  <div class="hidden lg:block lg:w-64 lg:flex-shrink-0">
-    <app-sidebar
-      [isOpen]="sidebarOpen"
-      (toggle)="toggleSidebar()"
-      (pageChange)="onPageChange($event)"
-    ></app-sidebar>
+<div class="p-2 md:p-2 h-full flex flex-col">
+  <!-- Header Row with Breadcrumb -->
+  <div class="flex flex-row justify-between items-center mb-2 md:mb-3 gap-2 min-h-0">
+    <!-- Dynamic Breadcrumb -->
+    <div class="flex items-center">
+      <app-breadcrumb
+        [currentPage]="'dashboard'"
+        (navigate)="onBreadcrumbNavigate($event)"
+      ></app-breadcrumb>
+    </div>
   </div>
 
-  <!-- Sidebar - Mobile -->
-  <div class="lg:hidden">
-    <app-sidebar
-      [isOpen]="sidebarOpen"
-      (toggle)="toggleSidebar()"
-      (pageChange)="onPageChange($event)"
-    ></app-sidebar>
-  </div>
-
-  <!-- Main Content Area -->
-  <div class="flex-1 flex flex-col">
-    <!-- Header -->
-    <app-header
-      [email]="currentUser?.email || ''"
-      (logout)="logout()"
-      (toggleSidebar)="toggleSidebar()"
-      (navigate)="onNavigate($event)"
-    ></app-header>
-
-    <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto p-0">
-      <div class="h-full">
-        <!-- Dashboard Content -->
-        <ng-container *ngIf="currentPage === 'dashboard'">
-          <div class="p-2 md:p-2 h-full flex flex-col">
-            <!-- Header Row with Breadcrumb -->
-            <div class="flex flex-row justify-between items-center mb-2 md:mb-3 gap-2 min-h-0">
-              <!-- Dynamic Breadcrumb -->
-              <div class="flex items-center">
-                <app-breadcrumb
-                  [currentPage]="'dashboard'"
-                  (navigate)="onBreadcrumbNavigate($event)"
-                ></app-breadcrumb>
-              </div>
-            </div>
-
-            <!-- Welcome Card Container -->
-            <div class="h-screen flex items-center justify-center overflow-hidden">
-              <div class="bg-white border border-red-300 rounded-2xl shadow-2xl p-12 w-96 sm:w-112 text-center transform hover:scale-105 transition-transform duration-300">
-                <h2 class="text-2xl sm:text-3xl font-bold text-blue-900 mb-4 flex justify-center">
-                  <img
-                    src="assets/logo-shine-neha-surgical.gif"
-                    alt="Neha Surgical Logo"
-                    class="h-40 sm:h-48 object-contain"
-                  />
-                </h2>
-                <p class="text-blue-800 text-lg sm:text-xl">
-                  {{ isFirstTimeLogin ? 'Welcome!' : 'Welcome back!' }}<br />
-                </p>
-              </div>
-            </div>
-          </div>
-        </ng-container>
-
-        <!-- Doctor Page -->
-        <ng-container *ngIf="currentPage === 'doctor'">
-          <app-doctor (navigate)="onNavigate($event)"></app-doctor>
-        </ng-container>
-
-        <!-- Item Page -->
-        <ng-container *ngIf="currentPage === 'item'">
-          <app-item (navigate)="onNavigate($event)"></app-item>
-        </ng-container>
-
-        <!-- Hospital Page -->
-        <ng-container *ngIf="currentPage === 'hospital'">
-          <app-hospital (navigate)="onNavigate($event)"></app-hospital>
-        </ng-container>
-
-        <!-- Other Pages Content -->
-        <ng-container *ngIf="currentPage !== 'dashboard' && currentPage !== 'doctor' && currentPage !== 'item' && currentPage !== 'hospital'">
-          <div class="p-2 md:p-4 h-full flex flex-col">
-            <!-- Header Row with Breadcrumb -->
-            <div class="flex flex-row justify-between items-center mb-2 md:mb-3 gap-2 min-h-0">
-              <div class="flex items-center">
-                <app-breadcrumb
-                  [currentPage]="currentPage"
-                  (navigate)="onBreadcrumbNavigate($event)"
-                ></app-breadcrumb>
-              </div>
-            </div>
-
-            <!-- Page Content Placeholder -->
-            <div class="flex-1 bg-white rounded-lg shadow p-4">
-              <h2 class="text-xl font-semibold text-gray-800 mb-4">{{ getPageTitle() }}</h2>
-              <p class="text-gray-600">Content for {{ currentPage }} page will be displayed here.</p>
-            </div>
-          </div>
-        </ng-container>
-      </div>
-    </main>
-
-    <!-- Footer -->
-    <footer class="bg-red-50 border-t border-red-200 py-1 flex-shrink-0">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center">
-          <p class="text-xs text-red-700">
-            © 2025 Neha Surgical | All rights reserved.
-          </p>
-        </div>
-      </div>
-    </footer>
+  <!-- Welcome Card Container -->
+  <div class="h-screen flex items-center justify-center overflow-hidden">
+    <div class="bg-white border border-red-300 rounded-2xl shadow-2xl p-12 w-96 sm:w-112 text-center transform hover:scale-105 transition-transform duration-300">
+      <h2 class="text-2xl sm:text-3xl font-bold text-blue-900 mb-4 flex justify-center">
+        <img
+          src="assets/logo-shine-neha-surgical.gif"
+          alt="Neha Surgical Logo"
+          class="h-40 sm:h-48 object-contain"
+        />
+      </h2>
+      <p class="text-blue-800 text-lg sm:text-xl">
+        {{ isFirstTimeLogin ? 'Welcome!' : 'Welcome back!' }}<br />
+      </p>
+    </div>
   </div>
 </div>

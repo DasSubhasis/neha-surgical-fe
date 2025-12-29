@@ -1,6 +1,7 @@
 import { Component, OnInit, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
@@ -156,7 +157,10 @@ export class DoctorComponent implements OnInit {
     { id: 5, doctorName: 'Dr. Vikram Singh', contactNo: '9876543214', email: 'vikram@hospital.com', identifier: 'DOC005', specialization: 'General Surgery', isActive: 'Y', status: 'Active' }
   ];
 
-  constructor(private doctorService: DoctorService) {}
+  constructor(
+    private doctorService: DoctorService,
+    private router: Router
+  ) {}
 
   ngOnInit(): void {
     this.fetchDoctors();
@@ -486,7 +490,7 @@ export class DoctorComponent implements OnInit {
   }
 
   onBreadcrumbNavigate(page: string): void {
-    this.navigate.emit(page);
+    this.router.navigate(['/' + page]);
   }
 
   closeViewDoctor(): void {
