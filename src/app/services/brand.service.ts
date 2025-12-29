@@ -39,8 +39,7 @@ export class BrandService {
    * Get all brands
    */
   getAllBrands(isActive: boolean = true): Observable<Brand[]> {
-    // Check if BRANDS endpoint exists, otherwise use a generic path
-    const endpoint = `/Brands${isActive !== undefined ? `?isActive=${isActive}` : ''}`;
+    const endpoint = `/Brands${isActive ? '?isActive=Y' : ''}`;
     return this.apiService.get<Brand[]>(endpoint);
   }
 
@@ -68,6 +67,7 @@ export class BrandService {
    */
   updateBrand(id: number, brandData: BrandFormData): Observable<ApiResponse> {
     const payload = {
+      brandId: id,
       name: brandData.name,
       isActive: brandData.isActive || 'Y'
     };

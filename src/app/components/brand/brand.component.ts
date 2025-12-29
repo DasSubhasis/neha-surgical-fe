@@ -173,8 +173,9 @@ export class BrandComponent implements OnInit {
       error: (error) => {
         console.error('Failed to fetch brands:', error);
         this.loading = false;
-           this.brands = [];
-        this.hasError = false;
+        this.brands = [];
+        this.hasError = true;
+        this.errorMessage = 'Failed to fetch brands.';
       }
     });
   }
