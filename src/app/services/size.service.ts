@@ -37,8 +37,8 @@ export class SizeService {
   /**
    * Get all sizes
    */
-  getAllSizes(isActive: boolean = true): Observable<Size[]> {
-    const endpoint = `/Sizes${isActive !== undefined ? `?isActive=${isActive}` : ''}`;
+  getAllSizes(isActive: string = 'Y'): Observable<Size[]> {
+    const endpoint = `/Sizes${isActive ? `?isActive=Y` : ''}`;
     return this.apiService.get<Size[]>(endpoint);
   }
 

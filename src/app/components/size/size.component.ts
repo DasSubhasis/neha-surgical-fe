@@ -154,7 +154,7 @@ export class SizeComponent implements OnInit {
     this.hasError = false;
     this.errorMessage = '';
     
-    this.sizeService.getAllSizes(true).subscribe({
+    this.sizeService.getAllSizes('Y').subscribe({
       next: (response) => {
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
         this.sizes = data.map((size: any) => ({
