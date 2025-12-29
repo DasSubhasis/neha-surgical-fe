@@ -37,11 +37,11 @@ export const routes: Routes = [
         path: 'brand',
         loadComponent: () => import('./components/brand/brand.component').then(m => m.BrandComponent)
       },
-      // Placeholder routes for pages not yet implemented
       {
         path: 'specification',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/specification/specification.component').then(m => m.SpecificationComponent)
       },
+      // Placeholder routes for pages not yet implemented
       {
         path: 'size',
         loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
