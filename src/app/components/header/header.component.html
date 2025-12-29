@@ -1,0 +1,94 @@
+<header class="bg-white shadow-sm border-b border-blue-100">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between items-center h-12">
+      <div class="flex items-center space-x-4">
+        <!-- Mobile Menu Button -->
+        <button
+          (click)="onToggleSidebar()"
+          class="p-2 rounded-md hover:bg-blue-50 lg:hidden"
+        >
+          <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+        <!-- Logo -->
+        <img 
+          src="assets/Logo.jpg" 
+          alt="Neha Surgical Logo" 
+          class="h-8 object-contain"
+        />
+      </div>
+      
+      <div class="flex items-center space-x-4">
+        <!-- Notification Icon -->
+        <div class="flex items-center">
+          <button
+            class="flex items-center rounded-full hover:bg-blue-50 transition-colors p-2"
+            title="Notifications"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="w-6 h-6">
+              <path fill="#e31e25" d="M320 64C302.3 64 288 78.3 288 96L288 99.2C215 114 160 178.6 160 256L160 277.7C160 325.8 143.6 372.5 113.6 410.1L103.8 422.3C98.7 428.6 96 436.4 96 444.5C96 464.1 111.9 480 131.5 480L508.4 480C528 480 543.9 464.1 543.9 444.5C543.9 436.4 541.2 428.6 536.1 422.3L526.3 410.1C496.4 372.5 480 325.8 480 277.7L480 256C480 178.6 425 114 352 99.2L352 96C352 78.3 337.7 64 320 64zM258 528C265.1 555.6 290.2 576 320 576C349.8 576 374.9 555.6 382 528L258 528z"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Avatar Dropdown -->
+        <div class="relative">
+          <button
+            (click)="toggleAvatarDropdown()"
+            class="flex items-center space-x-2 p-1 rounded-full hover:bg-blue-50 transition-colors"
+            title="Profile"
+          >
+            <div class="w-8 h-8 bg-red-600 rounded-full flex items-center justify-center">
+              <span class="text-white text-sm font-semibold">
+                {{ userInitial }}
+              </span>
+            </div>
+            <svg class="w-4 h-4 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          <!-- Dropdown Menu -->
+          <ng-container *ngIf="avatarDropdownOpen">
+            <!-- Backdrop -->
+            <div 
+              class="fixed inset-0 z-10" 
+              (click)="closeDropdown()"
+            ></div>
+            
+            <!-- Dropdown Content -->
+            <div class="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg z-20 border border-blue-100">
+              <div class="py-1">
+                <!-- Welcome Section -->
+                <div class="px-4 py-3 border-b border-blue-100">
+                  <p class="text-sm text-gray-900 font-medium">Welcome,</p>
+                  <p class="text-sm text-blue-600 truncate">{{ email }}</p>
+                </div>
+                
+                <button
+                  (click)="handleProfileClick()"
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 w-full text-left"
+                >
+                  <svg class="w-4 h-4 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  Profile
+                </button>
+                <button
+                  (click)="handleLogoutClick()"
+                  class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-blue-50 w-full text-left"
+                >
+                  <svg class="w-4 h-4 mr-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            </div>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
