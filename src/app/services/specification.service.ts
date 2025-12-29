@@ -37,7 +37,7 @@ export class SpecificationService {
   /**
    * Get all specifications
    */
-  getAllSpecifications(isActive: boolean = true): Observable<Specification[]> {
+  getAllSpecifications(isActive: string = 'Y'): Observable<Specification[]> {
     const endpoint = `/Specifications${isActive ? '?isActive=Y' : ''}`;
     return this.apiService.get<Specification[]>(endpoint);
   }

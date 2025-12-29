@@ -154,7 +154,7 @@ export class SpecificationComponent implements OnInit {
     this.hasError = false;
     this.errorMessage = '';
     
-    this.specificationService.getAllSpecifications(true).subscribe({
+    this.specificationService.getAllSpecifications('Y').subscribe({
       next: (response) => {
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
         this.specifications = data.map((spec: any) => ({
