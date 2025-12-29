@@ -1,5 +1,7 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 interface SubMenuItem {
   key: string;
@@ -20,12 +22,44 @@ interface MenuItem {
   imports: [CommonModule],
   templateUrl: './sidebar.component.html'
 })
-export class SidebarComponent {
+export class SidebarComponent implements OnInit {
   @Input() isOpen: boolean = false;
   @Output() toggle = new EventEmitter<void>();
   @Output() pageChange = new EventEmitter<string>();
 
   openMenus: { [key: string]: boolean } = {};
+  activeRoute: string = '';
+
+  constructor(private router: Router) {}
+
+  ngOnInit(): void {
+    // Get initial route
+    this.updateActiveRoute(this.router.url);
+
+    // Subscribe to route changes
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event: any) => {
+        this.updateActiveRoute(event.url);
+      });
+  }
+
+  updateActiveRoute(url: string): void {
+    // Remove leading slash and extract route key
+    const route = url.split('/')[1] || 'dashboard';
+    this.activeRoute = route;
+
+    // Auto-expand parent menu if submenu item is active
+    this.menuItems.forEach(item => {
+      if (item.submenu.some(sub => sub.key === this.activeRoute)) {
+        this.openMenus[item.key] = true;
+      }
+    });
+  }
+
+  isMenuActive(menuKey: string): boolean {
+    return this.activeRoute === menuKey;
+  }
 
   menuItems: MenuItem[] = [
     { key: 'dashboard', label: 'Home', icon: 'home', submenu: [] },
@@ -82,6 +116,7 @@ export class SidebarComponent {
   }
 
   handleMenuClick(menuKey: string): void {
+    this.activeRoute = menuKey;
     this.pageChange.emit(menuKey);
   }
 
