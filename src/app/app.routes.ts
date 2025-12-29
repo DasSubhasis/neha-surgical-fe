@@ -33,11 +33,11 @@ export const routes: Routes = [
         path: 'hospital',
         loadComponent: () => import('./components/hospital/hospital.component').then(m => m.HospitalComponent)
       },
-      // Placeholder routes for pages not yet implemented
       {
         path: 'brand',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/brand/brand.component').then(m => m.BrandComponent)
       },
+      // Placeholder routes for pages not yet implemented
       {
         path: 'specification',
         loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
