@@ -26,47 +26,7 @@ import { RoleService, Role, RoleFormData, Permission, ImportRow } from '../../se
 export class RoleComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
 
-  // Demo data for development
-  private demoData: Role[] = [
-    { 
-      id: 1, 
-      name: 'Super Admin', 
-      description: 'Full system access', 
-      permissions: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24], 
-      status: 'Active', 
-      isActive: 'Y', 
-      createdAt: '2025-01-01' 
-    },
-    { 
-      id: 2, 
-      name: 'Manager', 
-      description: 'Manager level access', 
-      permissions: [1, 2, 3, 4, 10, 11, 12, 14, 15, 16, 18, 19, 20, 21, 23], 
-      status: 'Active', 
-      isActive: 'Y', 
-      createdAt: '2025-01-05' 
-    },
-    { 
-      id: 3, 
-      name: 'Sales Executive', 
-      description: 'Sales operations access', 
-      permissions: [1, 10, 14, 15, 18, 20, 21, 23, 24], 
-      status: 'Active', 
-      isActive: 'Y', 
-      createdAt: '2025-01-10' 
-    },
-    { 
-      id: 4, 
-      name: 'Viewer', 
-      description: 'Read-only access', 
-      permissions: [1, 2, 6, 10, 14, 18, 20, 23], 
-      status: 'Active', 
-      isActive: 'Y', 
-      createdAt: '2025-01-15' 
-    },
-  ];
-
-  roles: Role[] = this.demoData;
+  roles: Role[] = [];
   loading: boolean = false;
   gridReady: boolean = false;
   private gridApi!: GridApi;
@@ -234,7 +194,8 @@ export class RoleComponent implements OnInit {
     
     this.roleService.getAllRoles(true).subscribe({
       next: (response) => {
-        this.roles = response.map(role => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.roles = data.map((role: any) => ({
           id: role.roleId || role.id,
           name: role.name,
           description: role.description,
@@ -249,9 +210,9 @@ export class RoleComponent implements OnInit {
       error: (error) => {
         console.error('Failed to fetch roles:', error);
         this.loading = false;
-        // For demo mode, use local data
-        this.roles = [...this.demoData];
-        this.hasError = false;
+        this.roles = [];
+        this.hasError = true;
+        this.errorMessage = 'Failed to fetch roles.';
       }
     });
   }

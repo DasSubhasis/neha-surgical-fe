@@ -26,33 +26,7 @@ import { HospitalService, Hospital, HospitalFormData, HospitalContact, ImportRow
 export class HospitalComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
 
-  // Demo data for development
-  private demoData: Hospital[] = [
-    { 
-      id: 1, 
-      name: 'City Hospital', 
-      address: '123 Main St, City', 
-      contactPerson: 'Ravi Kumar', 
-      contactNo: '9876543210', 
-      contacts: [{ name: 'Ravi Kumar', mobile: '9876543210', email: 'ravi.k@cityhosp.com', location: 'Main Campus', remarks: '' }], 
-      status: 'Active', 
-      isActive: 'Y',
-      createdAt: '2025-01-10' 
-    },
-    { 
-      id: 2, 
-      name: 'Green Valley Clinic', 
-      address: '45 Green Rd', 
-      contactPerson: 'Sita Verma', 
-      contactNo: '9123456789', 
-      contacts: [{ name: 'Sita Verma', mobile: '9123456789', email: 'sita.v@greenvalley.com', location: 'Outpatient Block', remarks: '' }], 
-      status: 'Active', 
-      isActive: 'Y',
-      createdAt: '2024-11-05' 
-    },
-  ];
-
-  hospitals: Hospital[] = this.demoData;
+  hospitals: Hospital[] = [];
   loading: boolean = false;
   gridReady: boolean = false;
   private gridApi!: GridApi;
@@ -196,7 +170,10 @@ export class HospitalComponent implements OnInit {
     
     this.hospitalService.getAllHospitals(true).subscribe({
       next: (response) => {
-        this.hospitals = response.map(hosp => ({
+        // Handle both array response and object with data property
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        
+        this.hospitals = data.map((hosp: any) => ({
           id: hosp.hospitalId || hosp.id,
           name: hosp.name,
           address: hosp.address,
@@ -214,7 +191,7 @@ export class HospitalComponent implements OnInit {
         console.error('Failed to fetch hospitals:', error);
         this.loading = false;
         // For demo mode, use local data
-        this.hospitals = [...this.demoData];
+        this.hospitals = [];
         this.hasError = false;
         
         // Set appropriate error message if needed

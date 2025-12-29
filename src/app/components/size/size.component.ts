@@ -26,15 +26,7 @@ import { SizeService, Size, SizeFormData, ImportRow } from '../../services/size.
 export class SizeComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
 
-  // Demo data for development
-  private demoData: Size[] = [
-    { id: 1, name: '2 mm', status: 'Active', isActive: 'Y', createdAt: '2025-01-10' },
-    { id: 2, name: '3 mm', status: 'Active', isActive: 'Y', createdAt: '2024-11-05' },
-    { id: 3, name: '4 mm', status: 'Active', isActive: 'Y', createdAt: '2025-01-10' },
-    { id: 4, name: '5 mm', status: 'Active', isActive: 'Y', createdAt: '2024-11-05' },
-  ];
-
-  sizes: Size[] = this.demoData;
+  sizes: Size[] = [];
   loading: boolean = false;
   gridReady: boolean = false;
   private gridApi!: GridApi;
@@ -164,7 +156,8 @@ export class SizeComponent implements OnInit {
     
     this.sizeService.getAllSizes(true).subscribe({
       next: (response) => {
-        this.sizes = response.map(size => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.sizes = data.map((size: any) => ({
           id: size.sizeId || size.id,
           name: size.name,
           status: size.isActive === 'Y' ? 'Active' : 'Inactive',
@@ -177,8 +170,7 @@ export class SizeComponent implements OnInit {
       error: (error) => {
         console.error('Failed to fetch sizes:', error);
         this.loading = false;
-        // For demo mode, use local data
-        this.sizes = [...this.demoData];
+        this.sizes = [];
         this.hasError = false;
       }
     });

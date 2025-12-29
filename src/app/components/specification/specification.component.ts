@@ -26,15 +26,7 @@ import { SpecificationService, Specification, SpecificationFormData, ImportRow }
 export class SpecificationComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
 
-  // Demo data for development
-  private demoData: Specification[] = [
-    { id: 1, name: 'Material Grade', status: 'Active', isActive: 'Y', createdAt: '2025-01-10' },
-    { id: 2, name: 'Sterilization Type', status: 'Active', isActive: 'Y', createdAt: '2024-11-05' },
-    { id: 3, name: 'Blade Size', status: 'Active', isActive: 'Y', createdAt: '2025-01-10' },
-    { id: 4, name: 'Instrument Length', status: 'Active', isActive: 'Y', createdAt: '2024-11-05' },
-  ];
-
-  specifications: Specification[] = this.demoData;
+  specifications: Specification[] = [];
   loading: boolean = false;
   gridReady: boolean = false;
   private gridApi!: GridApi;
@@ -164,7 +156,8 @@ export class SpecificationComponent implements OnInit {
     
     this.specificationService.getAllSpecifications(true).subscribe({
       next: (response) => {
-        this.specifications = response.map(spec => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.specifications = data.map((spec: any) => ({
           id: spec.specificationId || spec.id,
           name: spec.name,
           status: spec.isActive === 'Y' ? 'Active' : 'Inactive',
@@ -177,8 +170,7 @@ export class SpecificationComponent implements OnInit {
       error: (error) => {
         console.error('Failed to fetch specifications:', error);
         this.loading = false;
-        // For demo mode, use local data
-        this.specifications = [...this.demoData];
+        this.specifications = [];
         this.hasError = false;
       }
     });

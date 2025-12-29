@@ -148,14 +148,6 @@ export class DoctorComponent implements OnInit {
     ]
   ];
 
-  // Demo data for development
-  private demoData: Doctor[] = [
-    { id: 1, doctorName: 'Dr. Rajesh Kumar', contactNo: '9876543210', email: 'rajesh@hospital.com', identifier: 'DOC001', specialization: 'Orthopedics', isActive: 'Y', status: 'Active' },
-    { id: 2, doctorName: 'Dr. Priya Sharma', contactNo: '9876543211', email: 'priya@hospital.com', identifier: 'DOC002', specialization: 'Cardiology', isActive: 'Y', status: 'Active' },
-    { id: 3, doctorName: 'Dr. Amit Patel', contactNo: '9876543212', email: 'amit@hospital.com', identifier: 'DOC003', specialization: 'Neurology', isActive: 'N', status: 'Inactive' },
-    { id: 4, doctorName: 'Dr. Sneha Reddy', contactNo: '9876543213', email: 'sneha@hospital.com', identifier: 'DOC004', specialization: 'Pediatrics', isActive: 'Y', status: 'Active' },
-    { id: 5, doctorName: 'Dr. Vikram Singh', contactNo: '9876543214', email: 'vikram@hospital.com', identifier: 'DOC005', specialization: 'General Surgery', isActive: 'Y', status: 'Active' }
-  ];
 
   constructor(
     private doctorService: DoctorService,
@@ -183,7 +175,8 @@ export class DoctorComponent implements OnInit {
     
     this.doctorService.getAllDoctors('Y').subscribe({
       next: (response) => {
-        this.doctors = response.map(doc => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.doctors = data.map((doc: any) => ({
           id: doc.doctorId || doc.id,
           doctorName: doc.doctorName,
           contactNo: doc.contactNo,

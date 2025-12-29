@@ -166,10 +166,6 @@ export class ItemComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
-    // Load dropdown options
-    this.groupOptions = this.itemService.getGroupOptions();
-    this.categoryOptions = this.itemService.getCategoryOptions();
-    
     // Load items
     this.fetchItems();
   }
@@ -191,7 +187,8 @@ export class ItemComponent implements OnInit {
     
     this.itemService.getAllItems('Y').subscribe({
       next: (response) => {
-        this.items = response.map(item => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.items = data.map((item: any) => ({
           ...item,
           id: item.itemId || item.id,
           status: item.isActive === 'Y' ? 'Active' : 'Inactive'
@@ -200,11 +197,11 @@ export class ItemComponent implements OnInit {
         this.hasError = false;
       },
       error: (error) => {
-        console.warn('API not available, using catalog data:', error);
-        // Use catalog data when API is not available
-        this.items = this.itemService.getInitialItemsFromCatalog();
+        console.error('Failed to fetch items:', error);
+        this.items = [];
         this.loading = false;
-        this.hasError = false;
+        this.hasError = true;
+        this.errorMessage = 'Failed to fetch items.';
       }
     });
   }

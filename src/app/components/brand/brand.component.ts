@@ -27,12 +27,7 @@ export class BrandComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
 
   // Demo data for development
-  private demoData: Brand[] = [
-    { id: 1, name: 'Medicare Plus', status: 'Active', isActive: 'Y', createdAt: '2025-01-10' },
-    { id: 2, name: 'SurgiTech', status: 'Active', isActive: 'Y', createdAt: '2024-11-05' },
-    { id: 3, name: 'HealthPrime', status: 'Active', isActive: 'Y', createdAt: '2025-01-10' },
-    { id: 4, name: 'Neha Medicals', status: 'Active', isActive: 'Y', createdAt: '2024-11-05' },
-  ];
+   private demoData: Brand[] = [];
 
   brands: Brand[] = this.demoData;
   loading: boolean = false;
@@ -164,7 +159,8 @@ export class BrandComponent implements OnInit {
     
     this.brandService.getAllBrands(true).subscribe({
       next: (response) => {
-        this.brands = response.map(brand => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.brands = data.map((brand: any) => ({
           id: brand.brandId || brand.id,
           name: brand.name,
           status: brand.isActive === 'Y' ? 'Active' : 'Inactive',
@@ -177,8 +173,7 @@ export class BrandComponent implements OnInit {
       error: (error) => {
         console.error('Failed to fetch brands:', error);
         this.loading = false;
-        // For demo mode, use local data
-        this.brands = [...this.demoData];
+           this.brands = [];
         this.hasError = false;
       }
     });

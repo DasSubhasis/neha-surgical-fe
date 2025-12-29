@@ -26,15 +26,7 @@ import { CategoryService, Category, CategoryFormData, ImportRow } from '../../se
 export class CategoryComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
 
-  // Demo data for development
-  private demoData: Category[] = [
-    { id: 1, name: 'Surgical Instruments', status: 'Active', isActive: 'Y', createdAt: '2025-01-10' },
-    { id: 2, name: 'Medical Equipment', status: 'Active', isActive: 'Y', createdAt: '2024-11-05' },
-    { id: 3, name: 'Pharmaceuticals', status: 'Active', isActive: 'Y', createdAt: '2025-01-10' },
-    { id: 4, name: 'Orthopedic Supplies', status: 'Active', isActive: 'Y', createdAt: '2024-11-05' },
-  ];
-
-  categories: Category[] = this.demoData;
+  categories: Category[] = [];
   loading: boolean = false;
   gridReady: boolean = false;
   private gridApi!: GridApi;
@@ -164,7 +156,8 @@ export class CategoryComponent implements OnInit {
     
     this.categoryService.getAllCategories(true).subscribe({
       next: (response) => {
-        this.categories = response.map(cat => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.categories = data.map((cat: any) => ({
           id: cat.categoryId || cat.id,
           name: cat.name,
           status: cat.isActive === 'Y' ? 'Active' : 'Inactive',
@@ -178,7 +171,7 @@ export class CategoryComponent implements OnInit {
         console.error('Failed to fetch categories:', error);
         this.loading = false;
         // For demo mode, use local data
-        this.categories = [...this.demoData];
+          this.categories = [];
         this.hasError = false;
       }
     });

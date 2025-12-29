@@ -27,72 +27,8 @@ import { RoleService, Role } from '../../services/role.service';
 export class UserComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
 
-  // Demo roles data
-  private demoRoles: Role[] = [
-    { id: 1, name: 'Super Admin', description: 'Full system access', permissions: [], status: 'Active', isActive: 'Y' },
-    { id: 2, name: 'Manager', description: 'Manager level access', permissions: [], status: 'Active', isActive: 'Y' },
-    { id: 3, name: 'Sales Executive', description: 'Sales operations access', permissions: [], status: 'Active', isActive: 'Y' },
-    { id: 4, name: 'Viewer', description: 'Read-only access', permissions: [], status: 'Active', isActive: 'Y' },
-  ];
-
-  // Demo users data
-  private demoData: User[] = [
-    { 
-      id: 1, 
-      username: 'admin', 
-      email: 'admin@nehasurgical.com', 
-      fullName: 'System Administrator', 
-      phone: '9876543210',
-      roleId: 1,
-      roleName: 'Super Admin',
-      status: 'Active', 
-      isActive: 'Y', 
-      createdAt: '2025-01-01',
-      lastLogin: '2025-12-29'
-    },
-    { 
-      id: 2, 
-      username: 'ravi.kumar', 
-      email: 'ravi.kumar@nehasurgical.com', 
-      fullName: 'Ravi Kumar', 
-      phone: '9123456789',
-      roleId: 2,
-      roleName: 'Manager',
-      status: 'Active', 
-      isActive: 'Y', 
-      createdAt: '2025-01-05',
-      lastLogin: '2025-12-28'
-    },
-    { 
-      id: 3, 
-      username: 'priya.sharma', 
-      email: 'priya.sharma@nehasurgical.com', 
-      fullName: 'Priya Sharma', 
-      phone: '9234567890',
-      roleId: 3,
-      roleName: 'Sales Executive',
-      status: 'Active', 
-      isActive: 'Y', 
-      createdAt: '2025-01-10',
-      lastLogin: '2025-12-27'
-    },
-    { 
-      id: 4, 
-      username: 'amit.patel', 
-      email: 'amit.patel@nehasurgical.com', 
-      fullName: 'Amit Patel', 
-      phone: '9345678901',
-      roleId: 4,
-      roleName: 'Viewer',
-      status: 'Active', 
-      isActive: 'Y', 
-      createdAt: '2025-01-15',
-      lastLogin: '2025-12-26'
-    },
-  ];
-
-  users: User[] = this.demoData;
-  roles: Role[] = this.demoRoles;
+  users: User[] = [];
+  roles: Role[] = [];
   loading: boolean = false;
   gridReady: boolean = false;
   private gridApi!: GridApi;
@@ -256,7 +192,8 @@ export class UserComponent implements OnInit {
   fetchRoles(): void {
     this.roleService.getAllRoles(true).subscribe({
       next: (response) => {
-        this.roles = response.map(role => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.roles = data.map((role: any) => ({
           id: role.roleId || role.id,
           name: role.name,
           description: role.description,
@@ -267,7 +204,7 @@ export class UserComponent implements OnInit {
       },
       error: (error) => {
         console.error('Failed to fetch roles:', error);
-        this.roles = [...this.demoRoles];
+        this.roles = [];
       }
     });
   }
@@ -279,7 +216,8 @@ export class UserComponent implements OnInit {
     
     this.userService.getAllUsers(true).subscribe({
       next: (response) => {
-        this.users = response.map(user => ({
+        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
+        this.users = data.map((user: any) => ({
           id: user.userId || user.id,
           username: user.username,
           email: user.email,
@@ -298,7 +236,7 @@ export class UserComponent implements OnInit {
       error: (error) => {
         console.error('Failed to fetch users:', error);
         this.loading = false;
-        this.users = [...this.demoData];
+        this.users = [];
         this.hasError = false;
       }
     });
