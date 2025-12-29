@@ -91,6 +91,7 @@ export class HospitalService {
    */
   updateHospital(id: number, hospitalData: HospitalFormData): Observable<ApiResponse> {
     const payload = {
+      hospitalId: id,
       name: hospitalData.name,
       address: hospitalData.address || '',
       contactPerson: hospitalData.contactPerson || '',

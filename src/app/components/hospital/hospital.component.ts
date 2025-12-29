@@ -64,6 +64,9 @@ export class HospitalComponent implements OnInit {
     remarks: ''
   };
 
+  // Contact validation error
+  contactError: string = '';
+
   // Inline matches for duplicate detection
   inlineMatches: Hospital[] = [];
 
@@ -368,12 +371,14 @@ export class HospitalComponent implements OnInit {
   }
 
   addContact(): void {
+    this.contactError = '';
+    
     if (!this.newContact.name?.trim()) {
-      console.error('Contact name is required');
+      this.contactError = 'Contact name is required';
       return;
     }
     if (!this.isValidMobile(this.newContact.mobile)) {
-      console.error('Contact mobile must be a valid 10-digit mobile number');
+      this.contactError = 'Contact mobile must be a valid 10-digit mobile number';
       return;
     }
 
@@ -643,5 +648,8 @@ export class HospitalComponent implements OnInit {
 
   sanitizeMobile(): void {
     this.newContact.mobile = this.newContact.mobile.replace(/[^0-9]/g, '');
+    if (this.contactError) {
+      this.contactError = '';
+    }
   }
 }

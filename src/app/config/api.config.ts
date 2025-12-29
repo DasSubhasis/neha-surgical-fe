@@ -88,7 +88,7 @@ export const ENDPOINTS = {
   // Hospital Management
   HOSPITALS: {
     BASE: '/Hospitals',
-    LIST: (isActive?: boolean) => `/Hospitals${isActive !== undefined ? `?isActive=${isActive}` : ''}`,
+    LIST: (isActive?: boolean) => `/Hospitals${isActive !== undefined ? `?isActive=${isActive ? 'Y' : 'N'}` : ''}`,
     GET: (id: string | number) => `/Hospitals/${id}`,
     CREATE: '/Hospitals',
     UPDATE: (id: string | number) => `/Hospitals/${id}`,
