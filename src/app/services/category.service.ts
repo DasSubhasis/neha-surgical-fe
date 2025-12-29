@@ -37,8 +37,8 @@ export class CategoryService {
   /**
    * Get all categories
    */
-  getAllCategories(isActive: boolean = true): Observable<Category[]> {
-    const endpoint = `/Categories${isActive !== undefined ? `?isActive=${isActive}` : ''}`;
+  getAllCategories(isActive: string = 'Y'): Observable<Category[]> {
+    const endpoint = `/Categories${isActive ? `?isActive=Y` : ''}`;
     return this.apiService.get<Category[]>(endpoint);
   }
 

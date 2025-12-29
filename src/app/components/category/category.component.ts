@@ -154,7 +154,7 @@ export class CategoryComponent implements OnInit {
     this.hasError = false;
     this.errorMessage = '';
     
-    this.categoryService.getAllCategories(true).subscribe({
+    this.categoryService.getAllCategories('Y').subscribe({
       next: (response) => {
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
         this.categories = data.map((cat: any) => ({
