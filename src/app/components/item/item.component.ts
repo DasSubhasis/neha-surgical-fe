@@ -428,24 +428,12 @@ export class ItemComponent implements OnInit {
   }
 
   isSaveDisabled(): boolean {
-    const isDisabled = !this.formData.name?.trim() || 
+    return !this.formData.name?.trim() || 
            !this.formData.shortname?.trim() || 
            !this.formData.brandId || 
            !this.formData.categoryId || 
            this.formData.price == null || 
            this.formData.price < 0;
-    
-    // Debugging
-    console.log('Form validation:', {
-      name: this.formData.name,
-      shortname: this.formData.shortname,
-      brandId: this.formData.brandId,
-      categoryId: this.formData.categoryId,
-      price: this.formData.price,
-      isDisabled
-    });
-    
-    return isDisabled;
   }
 
   handleSaveItem(): void {
