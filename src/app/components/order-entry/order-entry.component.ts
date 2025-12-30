@@ -11,6 +11,9 @@ import { OrderService, Order, OrderFormData, OrderItem, ItemGroup } from '../../
 import { DoctorService, Doctor } from '../../services/doctor.service';
 import { HospitalService, Hospital } from '../../services/hospital.service';
 import { BrandService, Brand } from '../../services/brand.service';
+import { ItemService, Item } from '../../services/item.service';
+import { ToastService } from '../../services/toast.service';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-order-entry',
@@ -34,6 +37,7 @@ export class OrderEntryComponent implements OnInit {
   doctors: Doctor[] = [];
   hospitals: Hospital[] = [];
   brands: Brand[] = [];
+  allItems: Item[] = [];
   
   loading: boolean = false;
   gridReady: boolean = false;
@@ -67,7 +71,7 @@ export class OrderEntryComponent implements OnInit {
   // Items summary for modal
   itemsSummary: OrderItem[] = [];
   selectedBrandIds: (number | undefined)[] = [];
-  newItemName: string = '';
+  selectedAdditionalItemId: number | null = null;
 
   // Delete confirmation
   showDeleteConfirm: boolean = false;
@@ -89,7 +93,8 @@ export class OrderEntryComponent implements OnInit {
       sortable: true, 
       filter: 'agDateColumnFilter', 
       width: 120, 
-      minWidth: 120 
+      minWidth: 120,
+      valueFormatter: (params: any) => this.formatDate(params.value)
     },
     { 
       headerName: 'Doctor', 
@@ -113,15 +118,17 @@ export class OrderEntryComponent implements OnInit {
       sortable: true, 
       filter: 'agDateColumnFilter', 
       width: 120, 
-      minWidth: 120 
+      minWidth: 120,
+      valueFormatter: (params: any) => this.formatDate(params.value)
     },
     { 
       headerName: 'Material Send', 
       field: 'materialSendDate', 
       sortable: true, 
       filter: 'agDateColumnFilter', 
-      width: 130, 
-      minWidth: 130 
+      width: 130,
+      minWidth: 130,
+      valueFormatter: (params: any) => this.formatDate(params.value)
     },
     { 
       headerName: 'Status', 
@@ -230,6 +237,8 @@ export class OrderEntryComponent implements OnInit {
     private doctorService: DoctorService,
     private hospitalService: HospitalService,
     private brandService: BrandService,
+    private itemService: ItemService,
+    private toastService: ToastService,
     private router: Router
   ) {}
 
@@ -238,6 +247,7 @@ export class OrderEntryComponent implements OnInit {
     this.fetchDoctors();
     this.fetchHospitals();
     this.fetchBrands();
+    this.fetchAllItems();
   }
 
   private getCurrentDate(): string {
@@ -246,6 +256,18 @@ export class OrderEntryComponent implements OnInit {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  formatDate(dateString: string | undefined): string {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, '0');
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    
+    return `${day}-${month}-${year}`;
   }
 
   fetchOrders(): void {
@@ -298,6 +320,17 @@ export class OrderEntryComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching brands:', error);
+      }
+    });
+  }
+
+  fetchAllItems(): void {
+    this.itemService.getAllItems(true).subscribe({
+      next: (data) => {
+        this.allItems = data;
+      },
+      error: (error) => {
+        console.error('Error fetching all items:', error);
       }
     });
   }
@@ -373,13 +406,14 @@ export class OrderEntryComponent implements OnInit {
           }
           this.showDeleteConfirm = false;
           this.orderToDelete = null;
+          this.toastService.success('Order deleted successfully');
         } else {
-          alert(response.message || 'Failed to delete order');
+          this.toastService.error(response.message || 'Failed to delete order');
         }
       },
       error: (error) => {
         console.error('Error deleting order:', error);
-        alert('Failed to delete order');
+        this.toastService.error('Failed to delete order');
       }
     });
   }
@@ -415,62 +449,89 @@ export class OrderEntryComponent implements OnInit {
     };
     this.itemsSummary = [];
     this.selectedBrandIds = [];
-    this.newItemName = '';
   }
 
   onBrandSelectionChange(): void {
-    // Update itemsSummary based on selected brands
-    const brandRows: OrderItem[] = this.selectedBrandIds.map(bid => {
-      const brand = this.brands.find(b => b.brandId === bid);
-      return {
-        id: bid?.toString() || '',
-        name: brand?.name || bid?.toString() || '',
-        isGroup: true,
-        manual: false
-      };
-    });
+    // Fetch items for all selected brands
+    if (this.selectedBrandIds.length === 0) {
+      // Keep only manual items if no brands selected
+      const manualRows = this.itemsSummary.filter(i => i.manual);
+      this.itemsSummary = [...manualRows];
+      this.formData.itemGroups = [];
+      return;
+    }
 
-    // Keep manual items
-    const manualRows = this.itemsSummary.filter(i => i.manual);
-    
-    this.itemsSummary = [...brandRows, ...manualRows];
-    this.formData.itemGroups = this.selectedBrandIds.map(id => id?.toString() || '').filter(id => id);
+    // Fetch items for each selected brand
+    const brandItemRequests = this.selectedBrandIds.map(brandId => 
+      this.itemService.getItemsByBrand(brandId!)
+    );
+
+    forkJoin(brandItemRequests).subscribe({
+      next: (brandsItems: Item[][]) => {
+        // Flatten all items from all brands
+        const allItems: OrderItem[] = [];
+        
+        brandsItems.forEach((items, index) => {
+          const brandId = this.selectedBrandIds[index];
+          items.forEach(item => {
+            allItems.push({
+              id: item.itemId?.toString() || item.id?.toString() || '',
+              name: item.name,
+              isGroup: false,
+              manual: false
+            });
+          });
+        });
+
+        // Keep manual items
+        const manualRows = this.itemsSummary.filter(i => i.manual);
+        
+        this.itemsSummary = [...allItems, ...manualRows];
+        this.formData.itemGroups = this.selectedBrandIds.map(id => id?.toString() || '').filter(id => id);
+      },
+      error: (error) => {
+        console.error('Error fetching brand items:', error);
+        // Keep manual items on error
+        const manualRows = this.itemsSummary.filter(i => i.manual);
+        this.itemsSummary = [...manualRows];
+      }
+    });
   }
 
   addManualItem(): void {
-    if (!this.newItemName.trim()) return;
+    if (!this.selectedAdditionalItemId) return;
+    
+    // Check if item already exists in summary
+    const exists = this.itemsSummary.some(item => 
+      !item.manual && item.id === this.selectedAdditionalItemId!.toString()
+    );
+    if (exists) {
+      this.selectedAdditionalItemId = null;
+      return;
+    }
+    
+    // Find the selected item from allItems
+    const selectedItem = this.allItems.find(item => item.itemId === this.selectedAdditionalItemId);
+    if (!selectedItem || !selectedItem.itemId) return;
     
     const manualItem: OrderItem = {
-      id: `m-${Date.now()}`,
-      name: this.newItemName.trim(),
+      id: selectedItem.itemId.toString(),
+      name: selectedItem.name,
       isGroup: false,
       manual: true
     };
     
     this.itemsSummary.push(manualItem);
-    this.newItemName = '';
+    this.selectedAdditionalItemId = null;
   }
 
   removeSummaryItem(id: string): void {
     this.itemsSummary = this.itemsSummary.filter(i => i.id !== id);
-    
-    // If it was a brand, remove from selectedBrandIds
-    const brandId = parseInt(id);
-    if (!isNaN(brandId) && this.selectedBrandIds.includes(brandId)) {
-      this.selectedBrandIds = this.selectedBrandIds.filter(bid => bid !== brandId);
-    }
   }
 
   viewGroupItems(groupId: string): void {
-    const brand = this.brands.find(b => b.brandId?.toString() === groupId);
-    if (brand) {
-      // Note: This might need to be updated depending on how brand items are fetched
-      this.viewGroupItemsData = {
-        id: brand.brandId?.toString() || '',
-        name: brand.name,
-        items: [] // TODO: Fetch brand items from API if needed
-      };
-    }
+    // Not applicable anymore since we're showing individual items
+    // This method can be removed or left for future use
   }
 
   closeGroupItemsModal(): void {
@@ -510,13 +571,14 @@ export class OrderEntryComponent implements OnInit {
               }
             }
             this.handleCloseModal();
+            this.toastService.success('Order updated successfully');
           } else {
-            alert(response.message || 'Failed to update order');
+            this.toastService.error(response.message || 'Failed to update order');
           }
         },
         error: (error) => {
           console.error('Error updating order:', error);
-          alert('Failed to update order');
+          this.toastService.error('Failed to update order');
         }
       });
     } else {
@@ -528,13 +590,14 @@ export class OrderEntryComponent implements OnInit {
               this.gridApi.setGridOption('rowData', this.orders);
             }
             this.handleCloseModal();
+            this.toastService.success('Order created successfully');
           } else {
-            alert(response.message || 'Failed to create order');
+            this.toastService.error(response.message || 'Failed to create order');
           }
         },
         error: (error) => {
           console.error('Error creating order:', error);
-          alert('Failed to create order');
+          this.toastService.error('Failed to create order');
         }
       });
     }
@@ -542,15 +605,15 @@ export class OrderEntryComponent implements OnInit {
 
   validateForm(): boolean {
     if (!this.formData.doctorId) {
-      alert('Doctor is required');
+      this.toastService.warning('Doctor is required');
       return false;
     }
     if (!this.formData.hospitalId) {
-      alert('Hospital is required');
+      this.toastService.warning('Hospital is required');
       return false;
     }
     if (!this.formData.operationDate) {
-      alert('Operation Date is required');
+      this.toastService.warning('Operation Date is required');
       return false;
     }
     return true;

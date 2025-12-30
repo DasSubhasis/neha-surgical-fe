@@ -139,6 +139,15 @@ export class ItemService {
   }
 
   /**
+   * Get items by brand ID
+   */
+  getItemsByBrand(brandId: number): Observable<Item[]> {
+    return this.apiService.get<ApiResponse<Item[]>>(`/Items/brand/${brandId}`).pipe(
+      map(response => response.data || [])
+    );
+  }
+
+  /**
    * Delete an item
    */
   deleteItem(id: number): Observable<void> {
