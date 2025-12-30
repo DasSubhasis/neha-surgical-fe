@@ -5,8 +5,8 @@ import { Router } from '@angular/router';
 import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
-import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
-import { MenuService, Menu, MenuFormData, ImportRow } from '../../services/menu.service';
+import { ActionDropdownComponent, ActionItem } from '../../../components/action-dropdown/action-dropdown.component';
+import { MenuService, Menu, MenuFormData, ImportRow } from '../../../services/menu.service';
 
 @Component({
   selector: 'app-menu',

@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output, OnChanges, SimpleChanges } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { generateBreadcrumb, BreadcrumbItem } from '../../utils/breadcrumb.utils';
+import { generateBreadcrumb, BreadcrumbItem } from '../../../utils/breadcrumb.utils';
 
 @Component({
   selector: 'app-breadcrumb',

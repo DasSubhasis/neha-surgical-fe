@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService, ApiResponse } from './api.service';
 import { ENDPOINTS } from '../config/api.config';
 

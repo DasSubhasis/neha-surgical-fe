@@ -149,7 +149,7 @@
               class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
             >
               <option [ngValue]="null">Select Doctor</option>
-              <option *ngFor="let doctor of doctors" [ngValue]="doctor.id">{{ doctor.name }}</option>
+              <option *ngFor="let doctor of doctors" [ngValue]="doctor.doctorId">{{ doctor.doctorName }}</option>
             </select>
           </div>
           <div>
@@ -161,7 +161,7 @@
               class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
             >
               <option [ngValue]="null">Select Hospital</option>
-              <option *ngFor="let hospital of hospitals" [ngValue]="hospital.id">{{ hospital.name }}</option>
+              <option *ngFor="let hospital of hospitals" [ngValue]="hospital.hospitalId">{{ hospital.name }}</option>
             </select>
           </div>
           <div>

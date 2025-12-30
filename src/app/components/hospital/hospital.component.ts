@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
-import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
+import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
 import { HospitalService, Hospital, HospitalFormData, HospitalContact, ImportRow } from '../../services/hospital.service';
 
@@ -171,7 +171,7 @@ export class HospitalComponent implements OnInit {
     this.hasError = false;
     this.errorMessage = '';
     
-    this.hospitalService.getAllHospitals(true).subscribe({
+    this.hospitalService.getAllHospitals('Y').subscribe({
       next: (response) => {
         // Handle both array response and object with data property
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];

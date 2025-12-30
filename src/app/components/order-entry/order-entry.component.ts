@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
-import { BreadcrumbComponent } from '../breadcrumb/breadcrumb.component';
+import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
 import { OrderService, Order, OrderFormData, OrderItem, ItemGroup } from '../../services/order.service';
 import { DoctorService, Doctor } from '../../services/doctor.service';
@@ -278,7 +278,7 @@ export class OrderEntryComponent implements OnInit {
   }
 
   fetchHospitals(): void {
-    this.hospitalService.getAllHospitals(true).subscribe({
+    this.hospitalService.getAllHospitals('Y').subscribe({
       next: (data) => {
         this.hospitals = data;
       },

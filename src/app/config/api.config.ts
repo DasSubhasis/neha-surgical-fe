@@ -78,7 +78,7 @@ export const ENDPOINTS = {
   // Doctor Management
   DOCTORS: {
     BASE: '/Doctors',
-    LIST: (isActive?: boolean) => `/Doctors${isActive !== undefined ? `?isActive=${isActive}` : ''}`,
+    LIST: (isActive?: boolean) => `/Doctors${isActive !== undefined ? `?isActive=${isActive ? 'Y' : 'N'}` : ''}`,
     GET: (id: string | number) => `/Doctors/${id}`,
     CREATE: '/Doctors',
     UPDATE: (id: string | number) => `/Doctors/${id}`,

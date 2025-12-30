@@ -14,7 +14,7 @@ export const routes: Routes = [
   },
   {
     path: '',
-    loadComponent: () => import('./components/layout/layout.component').then(m => m.LayoutComponent),
+    loadComponent: () => import('./shared/components/layout/layout.component').then(m => m.LayoutComponent),
     canActivate: [authGuard],
     children: [
       {
@@ -59,7 +59,7 @@ export const routes: Routes = [
       },
       {
         path: 'menu',
-        loadComponent: () => import('./components/menu/menu.component').then(m => m.MenuComponent)
+        loadComponent: () => import('./shared/components/menu/menu.component').then(m => m.MenuComponent)
       },
       // Order Entry (implemented)
       {
@@ -69,7 +69,7 @@ export const routes: Routes = [
       // Placeholder routes for pages not yet implemented
       {
         path: 'order-reminder',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
       },
       {
         path: 'assistant-assignment',
@@ -77,27 +77,27 @@ export const routes: Routes = [
       },
       {
         path: 'material-transfer',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
       },
       {
         path: 'assistant-operations',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
       },
       {
         path: 'consumption-billing',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
       },
       {
         path: 'payment-collection',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
       },
       {
         path: 'reports',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
       },
       {
         path: 'profile',
-        loadComponent: () => import('./components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
       }
     ]
   },

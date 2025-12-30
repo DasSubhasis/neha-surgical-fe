@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService, ApiResponse } from './api.service';
 import { ENDPOINTS } from '../config/api.config';
 
@@ -57,9 +58,11 @@ export class HospitalService {
   /**
    * Get all hospitals
    */
-  getAllHospitals(isActive: boolean = true): Observable<Hospital[]> {
-    const endpoint = ENDPOINTS.HOSPITALS.LIST(isActive);
-    return this.apiService.get<Hospital[]>(endpoint);
+  getAllHospitals(isActive: string = 'Y'): Observable<Hospital[]> {
+    const endpoint = ENDPOINTS.HOSPITALS.LIST(isActive === 'Y');
+    return this.apiService.get<ApiResponse<Hospital[]>>(endpoint).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**
@@ -67,7 +70,9 @@ export class HospitalService {
    */
   getHospitalById(id: number): Observable<Hospital> {
     const endpoint = ENDPOINTS.HOSPITALS.GET(id);
-    return this.apiService.get<Hospital>(endpoint);
+    return this.apiService.get<ApiResponse<Hospital>>(endpoint).pipe(
+      map(response => response.data!)
+    );
   }
 
   /**
