@@ -116,8 +116,10 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Brand <span class="text-red-500">*</span></label>
             <app-searchable-dropdown
-              [(ngModel)]="formData.group"
+              [(ngModel)]="formData.brandId"
               [options]="groupOptions"
+              [idKey]="'brandId'"
+              [nameKey]="'name'"
               [placeholder]="'Select brand'"
               [required]="true"
             ></app-searchable-dropdown>
@@ -127,8 +129,10 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Category <span class="text-red-500">*</span></label>
             <app-searchable-dropdown
-              [(ngModel)]="formData.category"
+              [(ngModel)]="formData.categoryId"
               [options]="categoryOptions"
+              [idKey]="'categoryId'"
+              [nameKey]="'name'"
               [placeholder]="'Select category'"
               [required]="true"
             ></app-searchable-dropdown>
@@ -138,8 +142,10 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Specification</label>
             <app-searchable-dropdown
-              [(ngModel)]="formData.specification"
+              [(ngModel)]="formData.specificationId"
               [options]="specificationOptions"
+              [idKey]="'specificationId'"
+              [nameKey]="'name'"
               [placeholder]="'Select specification'"
               [required]="false"
             ></app-searchable-dropdown>
@@ -149,8 +155,10 @@
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">Size</label>
             <app-searchable-dropdown
-              [(ngModel)]="formData.size"
+              [(ngModel)]="formData.sizeId"
               [options]="sizeOptions"
+              [idKey]="'sizeId'"
+              [nameKey]="'name'"
               [placeholder]="'Select size'"
               [required]="false"
             ></app-searchable-dropdown>
@@ -283,19 +291,19 @@
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Brand</div>
-              <div class="text-sm font-normal text-gray-800">{{ viewItem.group }}</div>
+              <div class="text-sm font-normal text-gray-800">{{ viewItem.brandName }}</div>
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Category</div>
-              <div class="text-sm font-normal text-gray-800">{{ viewItem.category }}</div>
+              <div class="text-sm font-normal text-gray-800">{{ viewItem.categoryName }}</div>
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Specification</div>
-              <div class="text-sm font-normal text-gray-800">{{ viewItem.specification || '-' }}</div>
+              <div class="text-sm font-normal text-gray-800">{{ viewItem.specificationName || '-' }}</div>
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Size</div>
-              <div class="text-sm font-normal text-gray-800">{{ viewItem.size || '-' }}</div>
+              <div class="text-sm font-normal text-gray-800">{{ viewItem.sizeName || '-' }}</div>
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Material</div>

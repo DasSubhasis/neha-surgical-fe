@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService, ApiResponse } from './api.service';
 import { ENDPOINTS } from '../config/api.config';
 
@@ -40,7 +41,9 @@ export class BrandService {
    */
   getAllBrands(isActive: boolean = true): Observable<Brand[]> {
     const endpoint = `/Brands${isActive ? '?isActive=Y' : ''}`;
-    return this.apiService.get<Brand[]>(endpoint);
+    return this.apiService.get<ApiResponse<Brand[]>>(endpoint).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**

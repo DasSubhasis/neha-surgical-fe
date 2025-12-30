@@ -10,6 +10,7 @@ import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-d
 import { OrderService, Order, OrderFormData, OrderItem, ItemGroup } from '../../services/order.service';
 import { DoctorService, Doctor } from '../../services/doctor.service';
 import { HospitalService, Hospital } from '../../services/hospital.service';
+import { BrandService, Brand } from '../../services/brand.service';
 
 @Component({
   selector: 'app-order-entry',
@@ -32,7 +33,7 @@ export class OrderEntryComponent implements OnInit {
   orders: Order[] = [];
   doctors: Doctor[] = [];
   hospitals: Hospital[] = [];
-  itemGroups: ItemGroup[] = [];
+  brands: Brand[] = [];
   
   loading: boolean = false;
   gridReady: boolean = false;
@@ -65,7 +66,7 @@ export class OrderEntryComponent implements OnInit {
 
   // Items summary for modal
   itemsSummary: OrderItem[] = [];
-  selectedGroupIds: string[] = [];
+  selectedBrandIds: (number | undefined)[] = [];
   newItemName: string = '';
 
   // Delete confirmation
@@ -228,6 +229,7 @@ export class OrderEntryComponent implements OnInit {
     private orderService: OrderService,
     private doctorService: DoctorService,
     private hospitalService: HospitalService,
+    private brandService: BrandService,
     private router: Router
   ) {}
 
@@ -235,7 +237,7 @@ export class OrderEntryComponent implements OnInit {
     this.fetchOrders();
     this.fetchDoctors();
     this.fetchHospitals();
-    this.fetchItemGroups();
+    this.fetchBrands();
   }
 
   private getCurrentDate(): string {
@@ -289,13 +291,13 @@ export class OrderEntryComponent implements OnInit {
     });
   }
 
-  fetchItemGroups(): void {
-    this.orderService.getAllItemGroups().subscribe({
+  fetchBrands(): void {
+    this.brandService.getAllBrands(true).subscribe({
       next: (data) => {
-        this.itemGroups = data;
+        this.brands = data;
       },
       error: (error) => {
-        console.error('Error fetching item groups:', error);
+        console.error('Error fetching brands:', error);
       }
     });
   }
@@ -312,9 +314,8 @@ export class OrderEntryComponent implements OnInit {
 
   handleCreate(): void {
     this.editingOrder = null;
-    const newOrderNo = `ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     this.formData = {
-      orderNo: newOrderNo,
+      orderNo: '',
       orderDate: this.getCurrentDate(),
       doctorId: null,
       hospitalId: null,
@@ -327,7 +328,7 @@ export class OrderEntryComponent implements OnInit {
       createdBy: 'current.user@example.com'
     };
     this.itemsSummary = [];
-    this.selectedGroupIds = [];
+    this.selectedBrandIds = [];
     this.isModalOpen = true;
   }
 
@@ -347,7 +348,7 @@ export class OrderEntryComponent implements OnInit {
       createdBy: order.createdBy || 'current.user@example.com'
     };
     this.itemsSummary = order.items || [];
-    this.selectedGroupIds = order.itemGroups || [];
+    this.selectedBrandIds = (order.itemGroups || []).map(id => parseInt(id)).filter(id => !isNaN(id));
     this.isModalOpen = true;
   }
 
@@ -413,17 +414,17 @@ export class OrderEntryComponent implements OnInit {
       createdBy: 'current.user@example.com'
     };
     this.itemsSummary = [];
-    this.selectedGroupIds = [];
+    this.selectedBrandIds = [];
     this.newItemName = '';
   }
 
-  onGroupSelectionChange(): void {
-    // Update itemsSummary based on selected groups
-    const groupRows: OrderItem[] = this.selectedGroupIds.map(gid => {
-      const group = this.itemGroups.find(g => g.id === gid);
+  onBrandSelectionChange(): void {
+    // Update itemsSummary based on selected brands
+    const brandRows: OrderItem[] = this.selectedBrandIds.map(bid => {
+      const brand = this.brands.find(b => b.brandId === bid);
       return {
-        id: gid,
-        name: group?.name || gid,
+        id: bid?.toString() || '',
+        name: brand?.name || bid?.toString() || '',
         isGroup: true,
         manual: false
       };
@@ -432,8 +433,8 @@ export class OrderEntryComponent implements OnInit {
     // Keep manual items
     const manualRows = this.itemsSummary.filter(i => i.manual);
     
-    this.itemsSummary = [...groupRows, ...manualRows];
-    this.formData.itemGroups = this.selectedGroupIds;
+    this.itemsSummary = [...brandRows, ...manualRows];
+    this.formData.itemGroups = this.selectedBrandIds.map(id => id?.toString() || '').filter(id => id);
   }
 
   addManualItem(): void {
@@ -453,16 +454,22 @@ export class OrderEntryComponent implements OnInit {
   removeSummaryItem(id: string): void {
     this.itemsSummary = this.itemsSummary.filter(i => i.id !== id);
     
-    // If it was a group, remove from selectedGroupIds
-    if (this.selectedGroupIds.includes(id)) {
-      this.selectedGroupIds = this.selectedGroupIds.filter(gid => gid !== id);
+    // If it was a brand, remove from selectedBrandIds
+    const brandId = parseInt(id);
+    if (!isNaN(brandId) && this.selectedBrandIds.includes(brandId)) {
+      this.selectedBrandIds = this.selectedBrandIds.filter(bid => bid !== brandId);
     }
   }
 
   viewGroupItems(groupId: string): void {
-    const group = this.itemGroups.find(g => g.id === groupId);
-    if (group) {
-      this.viewGroupItemsData = group;
+    const brand = this.brands.find(b => b.brandId?.toString() === groupId);
+    if (brand) {
+      // Note: This might need to be updated depending on how brand items are fetched
+      this.viewGroupItemsData = {
+        id: brand.brandId?.toString() || '',
+        name: brand.name,
+        items: [] // TODO: Fetch brand items from API if needed
+      };
     }
   }
 
@@ -534,10 +541,6 @@ export class OrderEntryComponent implements OnInit {
   }
 
   validateForm(): boolean {
-    if (!this.formData.orderNo?.trim()) {
-      alert('Order No is required');
-      return false;
-    }
     if (!this.formData.doctorId) {
       alert('Doctor is required');
       return false;

@@ -53,15 +53,16 @@ export class ItemComponent implements OnInit {
   formData: ItemFormData = {
     name: '',
     shortname: '',
-    group: '',
-    category: '',
-    specification: '',
-    size: '',
+    brandId: null,
+    categoryId: null,
+    specificationId: null,
+    sizeId: null,
     material: '',
     model: '',
     description: '',
-    price: '',
-    status: 'Active'
+    price: 0,
+    status: 'Active',
+    isActive: 'Y'
   };
 
   // Dropdown options
@@ -73,8 +74,8 @@ export class ItemComponent implements OnInit {
   // AG Grid column definitions
   columnDefs: ColDef[] = [
     { headerName: 'Name', field: 'name', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 190 },
-    { headerName: 'Size', field: 'size', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 260 },
-    { headerName: 'Brand', field: 'group', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 160 },
+    { headerName: 'Size', field: 'sizeName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 260 },
+    { headerName: 'Brand', field: 'brandName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 160 },
     { headerName: 'Model/Part No.', field: 'model', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 180 },
     {
       headerName: 'Price',
@@ -227,7 +228,7 @@ export class ItemComponent implements OnInit {
       next: (response) => {
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
         this.categoryOptions = data.map((cat: any) => ({
-          id: cat.categoryId || cat.id,
+          categoryId: cat.categoryId || cat.id,
           name: cat.name,
           status: cat.isActive === 'Y' ? 'Active' : 'Inactive',
           isActive: cat.isActive
@@ -245,7 +246,7 @@ export class ItemComponent implements OnInit {
       next: (response) => {
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
         this.groupOptions = data.map((brand: any) => ({
-          id: brand.brandId || brand.id,
+          brandId: brand.brandId || brand.id,
           name: brand.name,
           status: brand.isActive === 'Y' ? 'Active' : 'Inactive',
           isActive: brand.isActive
@@ -263,7 +264,7 @@ export class ItemComponent implements OnInit {
       next: (response) => {
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
         this.sizeOptions = data.map((size: any) => ({
-          id: size.sizeId || size.id,
+          sizeId: size.sizeId || size.id,
           name: size.name,
           status: size.isActive === 'Y' ? 'Active' : 'Inactive',
           isActive: size.isActive
@@ -281,7 +282,7 @@ export class ItemComponent implements OnInit {
       next: (response) => {
         const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
         this.specificationOptions = data.map((spec: any) => ({
-          id: spec.specificationId || spec.id,
+          specificationId: spec.specificationId || spec.id,
           name: spec.name,
           status: spec.isActive === 'Y' ? 'Active' : 'Inactive',
           isActive: spec.isActive
@@ -303,15 +304,15 @@ export class ItemComponent implements OnInit {
   }
 
   handleExportExcel(): void {
-    const headers = ['Name', 'Short Name', 'Specification', 'Size', 'Material', 'Group', 'Category', 'Model/Part No.', 'Description', 'Price', 'Created Date', 'Status'];
+    const headers = ['Name', 'Short Name', 'Specification', 'Size', 'Material', 'Brand', 'Category', 'Model/Part No.', 'Description', 'Price', 'Created Date', 'Status'];
     const rows = this.items.map((item) => [
       item.name,
       item.shortname || '',
-      item.specification || '',
-      item.size || '',
+      item.specificationName || '',
+      item.sizeName || '',
       item.material || '',
-      item.group,
-      item.category,
+      item.brandName,
+      item.categoryName,
       item.model || '',
       (item.description || '').replace(/"/g, '""'),
       item.price,
@@ -342,15 +343,16 @@ export class ItemComponent implements OnInit {
     this.formData = {
       name: '',
       shortname: '',
-      group: '',
-      category: '',
-      specification: '',
-      size: '',
+      brandId: null,
+      categoryId: null,
+      specificationId: null,
+      sizeId: null,
       material: '',
       model: '',
       description: '',
-      price: '',
-      status: 'Active'
+      price: 0,
+      status: 'Active',
+      isActive: 'Y'
     };
     this.isModalOpen = true;
   }
@@ -361,15 +363,16 @@ export class ItemComponent implements OnInit {
     this.formData = {
       name: '',
       shortname: '',
-      group: '',
-      category: '',
-      specification: '',
-      size: '',
+      brandId: null,
+      categoryId: null,
+      specificationId: null,
+      sizeId: null,
       material: '',
       model: '',
       description: '',
-      price: '',
-      status: 'Active'
+      price: 0,
+      status: 'Active',
+      isActive: 'Y'
     };
   }
 
@@ -378,15 +381,16 @@ export class ItemComponent implements OnInit {
     this.formData = {
       name: item.name || '',
       shortname: item.shortname || '',
-      group: item.group || '',
-      category: item.category || '',
-      specification: item.specification || '',
-      size: item.size || '',
+      brandId: item.brandId || null,
+      categoryId: item.categoryId || null,
+      specificationId: item.specificationId || null,
+      sizeId: item.sizeId || null,
       material: item.material || '',
       model: item.model || '',
       description: item.description || '',
-      price: item.price != null ? String(item.price) : '',
-      status: item.status || 'Active'
+      price: item.price || 0,
+      status: item.status || 'Active',
+      isActive: item.isActive || 'Y'
     };
     this.isModalOpen = true;
   }
@@ -424,27 +428,37 @@ export class ItemComponent implements OnInit {
   }
 
   isSaveDisabled(): boolean {
-    return !this.formData.name?.trim() || 
+    const isDisabled = !this.formData.name?.trim() || 
            !this.formData.shortname?.trim() || 
-           !this.formData.group?.trim() || 
-           !this.formData.category?.trim() || 
-           !this.formData.price?.trim();
+           !this.formData.brandId || 
+           !this.formData.categoryId || 
+           this.formData.price == null || 
+           this.formData.price < 0;
+    
+    // Debugging
+    console.log('Form validation:', {
+      name: this.formData.name,
+      shortname: this.formData.shortname,
+      brandId: this.formData.brandId,
+      categoryId: this.formData.categoryId,
+      price: this.formData.price,
+      isDisabled
+    });
+    
+    return isDisabled;
   }
 
   handleSaveItem(): void {
     // Validation
     if (!this.formData.name?.trim() || !this.formData.shortname?.trim() || 
-        !this.formData.group?.trim() || !this.formData.category?.trim() || 
-        !this.formData.price?.trim()) {
+        !this.formData.brandId || !this.formData.categoryId || 
+        this.formData.price == null || this.formData.price < 0) {
       console.error('All required fields must be filled!');
       return;
     }
 
-    const priceValue = parseFloat(this.formData.price);
-    if (isNaN(priceValue) || priceValue < 0) {
-      console.error('Enter a valid non-negative price');
-      return;
-    }
+    // Set isActive based on status
+    this.formData.isActive = this.formData.status === 'Active' ? 'Y' : 'N';
 
     this.loading = true;
 
@@ -463,8 +477,22 @@ export class ItemComponent implements OnInit {
           if (index > -1) {
             this.items[index] = {
               ...this.items[index],
-              ...this.formData,
-              price: priceValue
+              name: this.formData.name,
+              shortname: this.formData.shortname,
+              brandId: this.formData.brandId!,
+              brandName: this.groupOptions.find(g => g.brandId === this.formData.brandId)?.name || this.items[index].brandName,
+              categoryId: this.formData.categoryId!,
+              categoryName: this.categoryOptions.find(c => c.categoryId === this.formData.categoryId)?.name || this.items[index].categoryName,
+              specificationId: this.formData.specificationId || undefined,
+              specificationName: this.specificationOptions.find(s => s.specificationId === this.formData.specificationId)?.name,
+              sizeId: this.formData.sizeId || undefined,
+              sizeName: this.sizeOptions.find(s => s.sizeId === this.formData.sizeId)?.name,
+              material: this.formData.material,
+              model: this.formData.model,
+              description: this.formData.description,
+              price: this.formData.price,
+              status: this.formData.status,
+              isActive: this.formData.isActive
             };
             this.items = [...this.items];
           }
@@ -487,18 +515,24 @@ export class ItemComponent implements OnInit {
           const today = new Date().toISOString().split('T')[0];
           const newItem: Item = {
             id: newId,
+            itemId: newId,
             name: this.formData.name,
             shortname: this.formData.shortname,
-            group: this.formData.group,
-            category: this.formData.category,
-            specification: this.formData.specification,
-            size: this.formData.size,
+            brandId: this.formData.brandId!,
+            brandName: this.groupOptions.find(g => g.brandId === this.formData.brandId)?.name || '',
+            categoryId: this.formData.categoryId!,
+            categoryName: this.categoryOptions.find(c => c.categoryId === this.formData.categoryId)?.name || '',
+            specificationId: this.formData.specificationId || undefined,
+            specificationName: this.specificationOptions.find(s => s.specificationId === this.formData.specificationId)?.name,
+            sizeId: this.formData.sizeId || undefined,
+            sizeName: this.sizeOptions.find(s => s.sizeId === this.formData.sizeId)?.name,
             material: this.formData.material,
             model: this.formData.model,
             description: this.formData.description,
-            price: priceValue,
+            price: this.formData.price,
             createdAt: today,
-            status: this.formData.status
+            status: this.formData.status,
+            isActive: this.formData.isActive
           };
           this.items = [...this.items, newItem];
           this.handleCloseModal();
@@ -527,8 +561,8 @@ export class ItemComponent implements OnInit {
       }
     }
     
-    // Update the form data with the current value
-    this.formData.price = input.value;
+    // Update the form data with the current value (convert to number)
+    this.formData.price = parseFloat(input.value) || 0;
   }
 
   toggleStatus(): void {

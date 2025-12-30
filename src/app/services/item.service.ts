@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { ApiService } from './api.service';
+import { map } from 'rxjs/operators';
+import { ApiService, ApiResponse } from './api.service';
 import { ENDPOINTS } from '../config/api.config';
 
 export interface Item {
@@ -8,10 +9,14 @@ export interface Item {
   itemId?: number;
   name: string;
   shortname: string;
-  group: string;
-  category: string;
-  specification?: string;
-  size?: string;
+  brandId: number;
+  brandName: string;
+  categoryId: number;
+  categoryName: string;
+  specificationId?: number;
+  specificationName?: string;
+  sizeId?: number;
+  sizeName?: string;
   material?: string;
   model?: string;
   description?: string;
@@ -24,15 +29,16 @@ export interface Item {
 export interface ItemFormData {
   name: string;
   shortname: string;
-  group: string;
-  category: string;
-  specification: string;
-  size: string;
+  brandId: number | null;
+  categoryId: number | null;
+  specificationId: number | null;
+  sizeId: number | null;
   material: string;
   model: string;
   description: string;
-  price: string;
+  price: number;
   status: string;
+  isActive: string;
 }
 
 export interface CatalogItem {
@@ -77,7 +83,9 @@ export class ItemService {
    */
   getAllItems(isActive: boolean = true): Observable<Item[]> {
     const endpoint = ENDPOINTS.ITEMS.LIST(isActive);
-    return this.apiService.get<Item[]>(endpoint);
+    return this.apiService.get<ApiResponse<Item[]>>(endpoint).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**
@@ -91,7 +99,21 @@ export class ItemService {
    * Create a new item
    */
   createItem(data: ItemFormData): Observable<Item> {
-    return this.apiService.post<Item>(ENDPOINTS.ITEMS.CREATE, data);
+    const payload = {
+      name: data.name,
+      shortname: data.shortname,
+      brandId: data.brandId,
+      categoryId: data.categoryId,
+      specificationId: data.specificationId || 0,
+      sizeId: data.sizeId || 0,
+      material: data.material || '',
+      model: data.model || '',
+      description: data.description || '',
+      price: data.price,
+      status: data.status,
+      isActive: data.isActive
+    };
+    return this.apiService.post<Item>(ENDPOINTS.ITEMS.CREATE, payload);
   }
 
   /**
@@ -100,7 +122,18 @@ export class ItemService {
   updateItem(id: number, data: ItemFormData): Observable<Item> {
     const payload = {
       itemId: id,
-      ...data
+      name: data.name,
+      shortname: data.shortname,
+      brandId: data.brandId,
+      categoryId: data.categoryId,
+      specificationId: data.specificationId || 0,
+      sizeId: data.sizeId || 0,
+      material: data.material || '',
+      model: data.model || '',
+      description: data.description || '',
+      price: data.price,
+      status: data.status,
+      isActive: data.isActive
     };
     return this.apiService.put<Item>(ENDPOINTS.ITEMS.UPDATE(id), payload);
   }
