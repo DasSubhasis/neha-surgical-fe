@@ -3,8 +3,6 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, NG_VALUE_ACCESSOR, ControlValueAccessor } from '@angular/forms';
 
 export interface DropdownOption {
-  id?: number;
-  name: string;
   [key: string]: any;
 }
 
@@ -48,9 +46,9 @@ export interface DropdownOption {
           *ngFor="let option of filteredOptions"
           (mousedown)="selectOption(option)"
           class="px-3 py-2 cursor-pointer hover:bg-indigo-50 hover:text-indigo-900 transition-colors duration-150"
-          [class.bg-indigo-100]="option.name === value"
+          [class.bg-indigo-100]="option[idKey] === value"
         >
-          {{ option.name }}
+          {{ option[nameKey] }}
         </div>
       </div>
       
@@ -70,11 +68,13 @@ export class SearchableDropdownComponent implements ControlValueAccessor, OnInit
   @Input() options: DropdownOption[] = [];
   @Input() placeholder: string = 'Select option';
   @Input() required: boolean = false;
+  @Input() idKey: string = 'id';
+  @Input() nameKey: string = 'name';
   
   searchText: string = '';
   filteredOptions: DropdownOption[] = [];
   isOpen: boolean = false;
-  value: string = '';
+  value: number | string | null = null;
   
   private onChange: any = () => {};
   private onTouch: any = () => {};
@@ -87,9 +87,9 @@ export class SearchableDropdownComponent implements ControlValueAccessor, OnInit
     this.filteredOptions = [...this.options];
     if (this.searchText && !this.isOpen) {
       // Update display text if value exists
-      const selectedOption = this.options.find(opt => opt.name === this.value);
+      const selectedOption = this.options.find(opt => opt[this.idKey] === this.value);
       if (selectedOption) {
-        this.searchText = selectedOption.name;
+        this.searchText = selectedOption[this.nameKey];
       }
     }
   }
@@ -104,10 +104,10 @@ export class SearchableDropdownComponent implements ControlValueAccessor, OnInit
     setTimeout(() => {
       this.isOpen = false;
       // Restore selected value text if exists
-      if (this.value) {
-        const selectedOption = this.options.find(opt => opt.name === this.value);
+      if (this.value !== null) {
+        const selectedOption = this.options.find(opt => opt[this.idKey] === this.value);
         if (selectedOption) {
-          this.searchText = selectedOption.name;
+          this.searchText = selectedOption[this.nameKey];
         }
       } else {
         this.searchText = '';
@@ -123,24 +123,24 @@ export class SearchableDropdownComponent implements ControlValueAccessor, OnInit
     
     const search = this.searchText.toLowerCase();
     this.filteredOptions = this.options.filter(option =>
-      option.name.toLowerCase().includes(search)
+      option[this.nameKey].toLowerCase().includes(search)
     );
   }
 
   selectOption(option: DropdownOption) {
-    this.value = option.name;
-    this.searchText = option.name;
+    this.value = option[this.idKey];
+    this.searchText = option[this.nameKey];
     this.isOpen = false;
     this.onChange(this.value);
     this.onTouch();
   }
 
   writeValue(value: any): void {
-    this.value = value || '';
-    if (this.value) {
-      const selectedOption = this.options.find(opt => opt.name === this.value);
+    this.value = value ?? null;
+    if (this.value !== null) {
+      const selectedOption = this.options.find(opt => opt[this.idKey] === this.value);
       if (selectedOption) {
-        this.searchText = selectedOption.name;
+        this.searchText = selectedOption[this.nameKey];
       }
     } else {
       this.searchText = '';

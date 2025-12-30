@@ -6,6 +6,7 @@ import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
+import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-dropdown.component';
 import { OrderService, Order, OrderFormData, OrderItem, ItemGroup } from '../../services/order.service';
 import { DoctorService, Doctor } from '../../services/doctor.service';
 import { HospitalService, Hospital } from '../../services/hospital.service';
@@ -13,7 +14,7 @@ import { HospitalService, Hospital } from '../../services/hospital.service';
 @Component({
   selector: 'app-order-entry',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridModule, BreadcrumbComponent, ActionDropdownComponent],
+  imports: [CommonModule, FormsModule, AgGridModule, BreadcrumbComponent, ActionDropdownComponent, SearchableDropdownComponent],
   templateUrl: './order-entry.component.html',
   styles: [`
     :host ::ng-deep .ag-header-small-font .ag-header-cell-label {
