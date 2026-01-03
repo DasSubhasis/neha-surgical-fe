@@ -89,31 +89,23 @@
 
       <!-- Modal Body -->
       <div class="p-6 flex-1 overflow-y-auto">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- Name -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Name <span class="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              [(ngModel)]="formData.name"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
-              placeholder="Enter item name" 
-            />
-          </div>
-          
-          <!-- Short Name -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Short Name <span class="text-red-500">*</span></label>
-            <input 
-              type="text" 
-              [(ngModel)]="formData.shortname"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
-              placeholder="Enter short name / code" 
-            />
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <!-- Row 1: Item Group, Brand, Category -->
+          <!-- Item Group Type -->
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Item Group Type <span class="text-red-500">*</span></label>
+            <app-searchable-dropdown
+              [(ngModel)]="formData.itemGroupId"
+              [options]="itemGroupOptions"
+              [idKey]="'itemGroupId'"
+              [nameKey]="'name'"
+              [placeholder]="'Select item group type'"
+              [required]="true"
+            ></app-searchable-dropdown>
           </div>
           
           <!-- Brand -->
-          <div>
+          <div class="md:col-span-2">
             <label class="block text-sm font-medium text-gray-700 mb-2">Brand <span class="text-red-500">*</span></label>
             <app-searchable-dropdown
               [(ngModel)]="formData.brandId"
@@ -126,7 +118,7 @@
           </div>
           
           <!-- Category -->
-          <div>
+          <div class="md:col-span-1">
             <label class="block text-sm font-medium text-gray-700 mb-2">Category <span class="text-red-500">*</span></label>
             <app-searchable-dropdown
               [(ngModel)]="formData.categoryId"
@@ -138,53 +130,53 @@
             ></app-searchable-dropdown>
           </div>
 
-          <!-- Item Group Type -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Item Group Type</label>
-            <app-searchable-dropdown
-              [(ngModel)]="formData.itemGroupId"
-              [options]="itemGroupOptions"
-              [idKey]="'itemGroupId'"
-              [nameKey]="'name'"
-              [placeholder]="'Select item group type'"
-              [required]="false"
-            ></app-searchable-dropdown>
+          <!-- Row 2: Item Name, Specification, Size -->
+          <!-- Name -->
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Item Name <span class="text-red-500">*</span></label>
+            <input 
+              type="text" 
+              [(ngModel)]="formData.name"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+              placeholder="Enter item name" 
+            />
           </div>
           
           <!-- Specification -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Specification</label>
+          <div class="md:col-span-2">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Specification <span class="text-red-500">*</span></label>
             <app-searchable-dropdown
               [(ngModel)]="formData.specificationId"
               [options]="specificationOptions"
               [idKey]="'specificationId'"
               [nameKey]="'name'"
               [placeholder]="'Select specification'"
-              [required]="false"
+              [required]="true"
             ></app-searchable-dropdown>
           </div>
           
           <!-- Size -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Size</label>
+          <div class="md:col-span-1">
+            <label class="block text-sm font-medium text-gray-700 mb-2">Size <span class="text-red-500">*</span></label>
             <app-searchable-dropdown
               [(ngModel)]="formData.sizeId"
               [options]="sizeOptions"
               [idKey]="'sizeId'"
               [nameKey]="'name'"
               [placeholder]="'Select size'"
-              [required]="false"
+              [required]="true"
             ></app-searchable-dropdown>
           </div>
-          
-          <!-- Material -->
+
+          <!-- Row 3: Short Name, Model/Part No., Price, Material, Status -->
+          <!-- Short Name -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Material</label>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Short Name <span class="text-red-500">*</span></label>
             <input 
               type="text" 
-              [(ngModel)]="formData.material"
+              [(ngModel)]="formData.shortname"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
-              placeholder="Enter material" 
+              placeholder="Enter short name / code" 
             />
           </div>
           
@@ -210,6 +202,17 @@
               (input)="validatePrice($event)"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
               placeholder="Enter price" 
+            />
+          </div>
+
+          <!-- Material -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Material</label>
+            <input 
+              type="text" 
+              [(ngModel)]="formData.material"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
+              placeholder="Enter material" 
             />
           </div>
           
@@ -240,8 +243,9 @@
             </div>
           </div>
           
+          <!-- Row 4: Description / Remarks (full width) -->
           <!-- Description / Remarks -->
-          <div class="md:col-span-2">
+          <div class="md:col-span-5">
             <label class="block text-sm font-medium text-gray-700 mb-2">Description / Remarks</label>
             <textarea 
               [(ngModel)]="formData.description"

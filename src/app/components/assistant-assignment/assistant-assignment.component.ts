@@ -6,17 +6,20 @@ import { AgGridModule } from 'ag-grid-angular';
 import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
+import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-dropdown.component';
 import { 
   AssistantAssignmentService, 
   AssistantAssignment, 
   Assistant, 
   ExistingAssignment 
 } from '../../services/assistant-assignment.service';
+import { OrderService, Order } from '../../services/order.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-assistant-assignment',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridModule, BreadcrumbComponent, ActionDropdownComponent],
+  imports: [CommonModule, FormsModule, AgGridModule, BreadcrumbComponent, ActionDropdownComponent, SearchableDropdownComponent],
   templateUrl: './assistant-assignment.component.html',
   styles: [`
     :host ::ng-deep .ag-header-small-font .ag-header-cell-label {
@@ -45,6 +48,27 @@ export class AssistantAssignmentComponent implements OnInit {
   // Modal states
   isAssignModalOpen: boolean = false;
   viewRow: AssistantAssignment | null = null;
+  isPendingOrdersModalOpen: boolean = false;
+
+  // Pending orders for assignment
+  pendingOrders: Order[] = [];
+  viewPendingOrder: Order | null = null;
+  private pendingGridApi!: GridApi;
+
+  // Assignment modal states
+  assignModalOpen: boolean = false;
+  assigningOrder: Order | null = null;
+  assignmentData: {
+    assistantId: number | null;
+    reportingDate: string;
+    reportingTime: string;
+    notes: string;
+  } = {
+    assistantId: null,
+    reportingDate: this.getCurrentDate(),
+    reportingTime: '09:00',
+    notes: ''
+  };
 
   // Assignment form data
   selectedOrder: AssistantAssignment | null = null;
@@ -129,6 +153,46 @@ export class AssistantAssignmentComponent implements OnInit {
     }
   ];
 
+  // Pending orders grid columns
+  pendingOrdersColumnDefs: ColDef[] = [
+    { headerName: 'Order No', field: 'orderNo', sortable: true, filter: 'agTextColumnFilter', width: 140 },
+    { headerName: 'Doctor', field: 'doctorName', sortable: true, filter: 'agTextColumnFilter', width: 150 },
+    { headerName: 'Hospital', field: 'hospitalName', sortable: true, filter: 'agTextColumnFilter', width: 150 },
+    { headerName: 'Operation Date', field: 'operationDate', sortable: true, filter: 'agDateColumnFilter', width: 130 },
+    { headerName: 'Operation Time', field: 'operationTime', sortable: true, filter: 'agTextColumnFilter', width: 130 },
+    {
+      headerName: 'Actions',
+      field: 'actions',
+      sortable: false,
+      filter: false,
+      width: 100,
+      pinned: 'right',
+      suppressHeaderMenuButton: true,
+      cellStyle: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' },
+      headerClass: 'ag-center-aligned-header ag-header-small-font',
+      cellRenderer: (params: any) => {
+        const container = document.createElement('div');
+        container.className = 'flex items-center justify-center w-full h-full space-x-1';
+        
+        const assignBtn = document.createElement('button');
+        assignBtn.className = 'flex items-center justify-center text-purple-600 hover:text-purple-900 p-1 hover:bg-purple-50 rounded transition-colors duration-200';
+        assignBtn.title = 'Assign Assistant';
+        assignBtn.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 640 640"><path d="M96 224c35.3 0 64-28.7 64-64s-28.7-64-64-64-64 28.7-64 64 28.7 64 64 64zm448 0c35.3 0 64-28.7 64-64s-28.7-64-64-64-64 28.7-64 64 28.7 64 64 64zm32 32h-64c-17.6 0-33.5 7.1-45.1 18.6 40.3 22.1 68.9 62 75.1 109.4h66c17.7 0 32-14.3 32-32v-32c0-35.3-28.7-64-64-64zm-256 0c61.9 0 112-50.1 112-112S381.9 32 320 32 208 82.1 208 144s50.1 112 112 112zm76.8 32h-8.3c-20.8 10-43.9 16-68.5 16s-47.6-6-68.5-16h-8.3C179.6 288 128 339.6 128 403.2V432c0 26.5 21.5 48 48 48h288c26.5 0 48-21.5 48-48v-28.8c0-63.6-51.6-115.2-115.2-115.2zm-223.7-13.4C161.5 263.1 145.6 256 128 256H64c-35.3 0-64 28.7-64 64v32c0 17.7 14.3 32 32 32h65.9c6.3-47.4 34.9-87.3 75.2-109.4z"/></svg>`;
+        assignBtn.addEventListener('click', () => this.openAssignModalFromGrid(params.data));
+        
+        const viewBtn = document.createElement('button');
+        viewBtn.className = 'flex items-center justify-center text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded transition-colors duration-200';
+        viewBtn.title = 'View Details';
+        viewBtn.innerHTML = `<svg class="w-4 h-4" fill="#52a447" viewBox="0 0 640 640"><path d="M320 96C239.2 96 174.5 132.8 127.4 176.6C80.6 220.1 49.3 272 34.4 307.7C31.1 315.6 31.1 324.4 34.4 332.3C49.3 368 80.6 420 127.4 463.4C174.5 507.1 239.2 544 320 544C400.8 544 465.5 507.2 512.6 463.4C559.4 419.9 590.7 368 605.6 332.3C608.9 324.4 608.9 315.6 605.6 307.7C590.7 272 559.4 220 512.6 176.6C465.5 132.9 400.8 96 320 96zM176 320C176 240.5 240.5 176 320 176C399.5 176 464 240.5 464 320C464 399.5 399.5 464 320 464C240.5 464 176 399.5 176 320zM320 256C320 291.3 291.3 320 256 320C244.5 320 233.7 317 224.3 311.6C223.3 322.5 224.2 333.7 227.2 344.8C240.9 396 293.6 426.4 344.8 412.7C396 399 426.4 346.3 412.7 295.1C400.5 249.4 357.2 220.3 311.6 224.3C316.9 233.6 320 244.4 320 256z"/></svg>`;
+        viewBtn.addEventListener('click', () => this.viewPendingOrderDetails(params.data));
+        
+        container.appendChild(assignBtn);
+        container.appendChild(viewBtn);
+        return container;
+      }
+    }
+  ];
+
   defaultColDef: ColDef = {
     resizable: true,
     sortable: true,
@@ -140,6 +204,8 @@ export class AssistantAssignmentComponent implements OnInit {
 
   constructor(
     private assistantAssignmentService: AssistantAssignmentService,
+    private orderService: OrderService,
+    private toastService: ToastService,
     private router: Router
   ) {}
 
@@ -152,21 +218,20 @@ export class AssistantAssignmentComponent implements OnInit {
     this.actionItems = [
       [
         {
+          label: 'Assign Assistant',
+          icon: 'add',
+          onClick: () => this.openPendingOrdersModal()
+        },
+        {
           label: 'Refresh',
-          icon: `<svg class="text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                         d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                 </svg>`,
+          icon: 'refresh',
           onClick: () => this.fetchData()
         }
       ],
       [
         {
           label: 'Export to Excel',
-          icon: `<svg class="text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                         d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                 </svg>`,
+          icon: 'export',
           onClick: () => this.handleExportCSV()
         }
       ]
@@ -202,6 +267,38 @@ export class AssistantAssignmentComponent implements OnInit {
 
   retryFetch(): void {
     this.fetchData();
+  }
+
+  openPendingOrdersModal(): void {
+    this.isPendingOrdersModalOpen = true;
+    this.fetchPendingOrders();
+  }
+
+  closePendingOrdersModal(): void {
+    this.isPendingOrdersModalOpen = false;
+    this.pendingOrders = [];
+    this.viewPendingOrder = null;
+  }
+
+  fetchPendingOrders(): void {
+    this.orderService.getOrders().subscribe({
+      next: (data) => {
+        this.pendingOrders = data.filter(order => order.status === 'Pending');
+      },
+      error: (error) => {
+        console.error('Error fetching pending orders:', error);
+        this.pendingOrders = [];
+      }
+    });
+  }
+
+  viewPendingOrderDetails(order: Order): void {
+    this.viewPendingOrder = order;
+  }
+
+  onPendingGridReady(params: GridReadyEvent): void {
+    this.pendingGridApi = params.api;
+    params.api.sizeColumnsToFit();
   }
 
   onGridReady(params: GridReadyEvent): void {
@@ -354,6 +451,112 @@ export class AssistantAssignmentComponent implements OnInit {
         alert('Failed to assign assistant');
       }
     });
+  }
+
+  // Assignment modal methods for pending orders
+  openAssignModalFromGrid(order: Order): void {
+    this.assigningOrder = order;
+    this.assignmentData = {
+      assistantId: null,
+      reportingDate: order.operationDate || this.getCurrentDate(),
+      reportingTime: '09:00',
+      notes: ''
+    };
+    this.assignModalOpen = true;
+    this.closePendingOrdersModal(); // Close pending orders modal
+  }
+
+  closeAssignModalFromGrid(): void {
+    this.assignModalOpen = false;
+    this.assigningOrder = null;
+    this.existingAssignments = [];
+    this.assignmentData = {
+      assistantId: null,
+      reportingDate: this.getCurrentDate(),
+      reportingTime: '09:00',
+      notes: ''
+    };
+  }
+
+  onAssistantChangeFromGrid(): void {
+    this.fetchExistingAssignmentsFromGrid();
+  }
+
+  onReportingDateChangeFromGrid(): void {
+    this.fetchExistingAssignmentsFromGrid();
+  }
+
+  private fetchExistingAssignmentsFromGrid(): void {
+    if (this.assignmentData.reportingDate) {
+      this.assistantAssignmentService.getExistingAssignmentsByDate(
+        this.assignmentData.assistantId,
+        this.assignmentData.reportingDate
+      ).subscribe({
+        next: (assignments) => {
+          this.existingAssignments = assignments;
+        },
+        error: (error) => {
+          console.error('Error fetching existing assignments:', error);
+          this.existingAssignments = [];
+        }
+      });
+    } else {
+      this.existingAssignments = [];
+    }
+  }
+
+  handleAssignAssistantFromGrid(): void {
+    if (!this.assignmentData.assistantId) {
+      this.toastService.warning('Please select an assistant');
+      return;
+    }
+
+    if (!this.assigningOrder) {
+      return;
+    }
+
+    this.assistantAssignmentService.assignAssistant(
+      this.assigningOrder.id,
+      this.assignmentData.assistantId,
+      this.assignmentData.reportingDate,
+      this.assignmentData.reportingTime,
+      this.assignmentData.notes,
+      0
+    ).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.toastService.success(response.message || 'Assistant assigned successfully');
+          this.closeAssignModalFromGrid();
+          this.fetchData(); // Refresh assignments
+          this.fetchPendingOrders(); // Refresh pending orders if modal is still open
+        } else {
+          this.toastService.error(response.message || 'Failed to assign assistant');
+        }
+      },
+      error: (error) => {
+        console.error('Error assigning assistant:', error);
+        this.toastService.error('Failed to assign assistant');
+      }
+    });
+  }
+
+  formatDate(dateString: string): string {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  formatTime(timeString: string): string {
+    if (!timeString) return '';
+    return timeString;
+  }
+
+  getCurrentDate(): string {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   handleExportCSV(): void {

@@ -30,7 +30,7 @@ export class SidebarComponent implements OnInit {
   openMenus: { [key: string]: boolean } = {};
   activeRoute: string = '';
 
-  constructor(private router: Router) {}
+  constructor(private router: Router) { }
 
   ngOnInit(): void {
     // Get initial route
@@ -64,52 +64,40 @@ export class SidebarComponent implements OnInit {
   menuItems: MenuItem[] = [
     { key: 'dashboard', label: 'Home', icon: 'home', submenu: [] },
     {
-      key: 'master-data', label: 'Master Data', icon: 'database', submenu: [
-        { key: 'item', label: 'Items', icon: 'sitemap' },
+      key: 'master-data', label: 'Master Data', icon: 'database', submenu: [        
         { key: 'doctor', label: 'Doctor', icon: 'user-nurse' },
         { key: 'hospital', label: 'Hospital', icon: 'hospital' },
         { key: 'brand', label: 'Brand', icon: 'tag' },
         { key: 'specification', label: 'Specification', icon: 'list' },
         { key: 'size', label: 'Size', icon: 'ruler' },
         { key: 'category', label: 'Category', icon: 'folder' },
-        { key: 'item-group', label: 'Item Group', icon: 'layer-group' },
+        { key: 'item-group', label: 'Item Group', icon: 'user-cog' },
+        { key: 'item', label: 'Items', icon: 'sitemap' }
+        
+      ]
+    },
+    {
+      key: 'order', label: 'Transactions', icon: 'receipt', submenu: [
+        { key: 'order-entry', label: 'Order Entry', icon: 'plus-circle' },
+        { key: 'assistant-assignment', label: 'Assistant Assignment', icon: 'handshake' },
+        { key: 'material-transfer', label: 'Material Transfer', icon: 'truck' },
+        { key: 'assistant-operations', label: 'Assistant Operations', icon: 'hospital-user' },
+        { key: 'consumption-billing', label: 'Consumption & Billing', icon: 'file-invoice' },
+        { key: 'payment-collection', label: 'Payment Collection', icon: 'hand-holding-dollar' }
+      ]
+    },
+    {
+      key: 'reports', label: 'Reports', icon: 'chart-pie', submenu: [
+        { key: 'order-reminder', label: 'Upcoming Orders', icon: 'clock' }
+      ]
+    },
+    {
+      key: 'settings', label: 'Settings', icon: 'user-cog', submenu: [
         { key: 'user', label: 'User', icon: 'users' },
         { key: 'role', label: 'Role', icon: 'shield' },
         { key: 'menu', label: 'Menu', icon: 'bars' }
       ]
     },
-    {
-      key: 'order', label: 'Order Collection', icon: 'shopping-cart', submenu: [
-        { key: 'order-entry', label: 'Order Entry', icon: 'plus-circle' },
-        { key: 'order-reminder', label: 'Upcoming Orders', icon: 'clock' }
-      ]
-    },
-    {
-      key: 'assignment', label: 'Order Assignment', icon: 'folder-tree', submenu: [
-        { key: 'assistant-assignment', label: 'Assistant Assignment', icon: 'handshake' }
-      ]
-    },
-    {
-      key: 'transfer', label: 'Material Movement', icon: 'arrows-exchange', submenu: [
-        { key: 'material-transfer', label: 'Material Transfer', icon: 'truck' }
-      ]
-    },
-    {
-      key: 'operations', label: 'Assistant Operations', icon: 'clipboard', submenu: [
-        { key: 'assistant-operations', label: 'Assistant Operations', icon: 'hospital-user' }
-      ]
-    },
-    {
-      key: 'billing', label: 'Consumption & Billing', icon: 'receipt', submenu: [
-        { key: 'consumption-billing', label: 'Consumption & Billing', icon: 'file-invoice' }
-      ]
-    },
-    {
-      key: 'payment', label: 'Payment Collection', icon: 'money-bill', submenu: [
-        { key: 'payment-collection', label: 'Payment Collection', icon: 'hand-holding-dollar' }
-      ]
-    },
-    { key: 'reports', label: 'Reports', icon: 'chart-pie', submenu: [] }
   ];
 
   toggleSubmenu(menuKey: string): void {

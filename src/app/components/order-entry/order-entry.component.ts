@@ -12,7 +12,6 @@ import { DoctorService, Doctor } from '../../services/doctor.service';
 import { HospitalService, Hospital } from '../../services/hospital.service';
 import { ItemGroupService, ItemGroup as ItemGroupType } from '../../services/item-group.service';
 import { ItemService, Item } from '../../services/item.service';
-import { AssistantAssignmentService, Assistant, ExistingAssignment } from '../../services/assistant-assignment.service';
 import { UserService } from '../../services/user.service';
 import { ConfigService } from '../../services/config.service';
 import { ToastService } from '../../services/toast.service';
@@ -41,7 +40,6 @@ export class OrderEntryComponent implements OnInit {
   hospitals: Hospital[] = [];
   itemGroups: ItemGroupType[] = [];
   allItems: Item[] = [];
-  assistants: Assistant[] = [];
   
   loading: boolean = false;
   gridReady: boolean = false;
@@ -56,20 +54,6 @@ export class OrderEntryComponent implements OnInit {
   editingOrder: Order | null = null;
   viewOrder: Order | null = null;
   viewGroupItemsData: ItemGroup | null = null;
-  assignModalOpen: boolean = false;
-  assigningOrder: Order | null = null;
-  existingAssignments: ExistingAssignment[] = [];
-  assignmentData: {
-    assistantId: number | null;
-    reportingDate: string;
-    reportingTime: string;
-    notes: string;
-  } = {
-    assistantId: null,
-    reportingDate: this.getCurrentDate(),
-    reportingTime: '09:00',
-    notes: ''
-  };
 
   // Form data
   formData: OrderFormData = {
@@ -189,25 +173,6 @@ export class OrderEntryComponent implements OnInit {
         const container = document.createElement('div');
         container.className = 'flex items-center justify-center w-full h-full space-x-1';
         
-        // Assign/Unassign button
-        if (params.data.assistantName) {
-          // Unassign button (shown when assistant is assigned)
-          const unassignBtn = document.createElement('button');
-          unassignBtn.className = 'flex items-center justify-center text-orange-600 hover:text-orange-900 p-1 hover:bg-orange-50 rounded transition-colors duration-200';
-          unassignBtn.title = 'Unassign Assistant';
-          unassignBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"/></svg>`;
-          unassignBtn.addEventListener('click', () => this.handleUnassign(params.data));
-          container.appendChild(unassignBtn);
-        } else {
-          // Assign button (shown when no assistant assigned)
-          const assignBtn = document.createElement('button');
-          assignBtn.className = 'flex items-center justify-center text-purple-600 hover:text-purple-900 p-1 hover:bg-purple-50 rounded transition-colors duration-200';
-          assignBtn.title = 'Assign Assistant';
-          assignBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>`;
-          assignBtn.addEventListener('click', () => this.openAssignModal(params.data));
-          container.appendChild(assignBtn);
-        }
-
         // Edit button
         const editBtn = document.createElement('button');
         editBtn.className = 'flex items-center justify-center text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors duration-200';
@@ -250,19 +215,19 @@ export class OrderEntryComponent implements OnInit {
     [
       {
         label: 'Add New Order',
-        icon: `<svg class="text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>`,
+        icon: 'add',
         onClick: () => this.handleCreate()
       },
       {
         label: 'Refresh',
-        icon: `<svg class="text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>`,
+        icon: 'refresh',
         onClick: () => this.fetchOrders()
       }
     ],
     [
       {
         label: 'Export to Excel',
-        icon: `<svg class="text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>`,
+        icon: 'export',
         onClick: () => this.handleExportCSV()
       }
     ]
@@ -274,7 +239,6 @@ export class OrderEntryComponent implements OnInit {
     private hospitalService: HospitalService,
     private itemGroupService: ItemGroupService,
     private itemService: ItemService,
-    private assistantAssignmentService: AssistantAssignmentService,
     private userService: UserService,
     private configService: ConfigService,
     private toastService: ToastService,
@@ -287,7 +251,6 @@ export class OrderEntryComponent implements OnInit {
     this.fetchHospitals();
     this.fetchItemGroups();
     this.fetchAllItems();
-    this.fetchAssistants();
   }
 
   private getCurrentDate(): string {
@@ -612,32 +575,23 @@ export class OrderEntryComponent implements OnInit {
           console.log('Update Order Response:', response);
           
           // Handle response - backend might return data directly or wrapped in ApiResponse
-          let updatedOrder: Order | null = null;
           let isSuccess = false;
           
           // Check if response has ApiResponse structure
           if (response && typeof response === 'object' && 'success' in response) {
             isSuccess = response.success === true;
-            updatedOrder = response.data || null;
           } else if (response && typeof response === 'object' && 'id' in response) {
             // Backend returned order directly without wrapper
             isSuccess = true;
-            updatedOrder = response as any;
           }
           
-          if (isSuccess && updatedOrder) {
-            const index = this.orders.findIndex(o => o.id === this.editingOrder!.id);
-            if (index !== -1) {
-              this.orders[index] = updatedOrder;
-              if (this.gridApi) {
-                this.gridApi.setGridOption('rowData', this.orders);
-              }
-            }
+          if (isSuccess) {
             this.handleCloseModal();
+            this.fetchOrders(); // Refresh grid with updated data
             this.toastService.success('Order updated successfully');
           } else {
             const errorMsg = (response as any)?.message || 'Failed to update order';
-            console.warn('Update order failed:', { response, isSuccess, updatedOrder });
+            console.warn('Update order failed:', { response, isSuccess });
             this.toastService.error(errorMsg);
           }
         },
@@ -652,35 +606,28 @@ export class OrderEntryComponent implements OnInit {
           console.log('Create Order Response:', response);
           
           // Handle response - backend might return data directly or wrapped in ApiResponse
-          let orderData: Order | null = null;
           let isSuccess = false;
           
           // Check if response has ApiResponse structure with success field
           if (response && typeof response === 'object' && 'success' in response) {
             isSuccess = response.success === true;
-            orderData = response.data || null;
           } 
           // Check if response has message and data fields (success pattern)
           else if (response && typeof response === 'object' && 'data' in response && 'message' in response) {
             isSuccess = true;
-            orderData = response.data || null;
           } 
           // Backend returned order directly without wrapper
           else if (response && typeof response === 'object' && 'id' in response) {
             isSuccess = true;
-            orderData = response as any;
           }
           
-          if (isSuccess && orderData) {
-            this.orders = [orderData, ...this.orders];
-            if (this.gridApi) {
-              this.gridApi.setGridOption('rowData', this.orders);
-            }
+          if (isSuccess) {
             this.handleCloseModal();
+            this.fetchOrders(); // Refresh grid with updated data
             this.toastService.success('Order created successfully');
           } else {
             const errorMsg = response?.message || 'Failed to create order';
-            console.warn('Create order failed:', { response, isSuccess, orderData });
+            console.warn('Create order failed:', { response, isSuccess });
             this.toastService.error(errorMsg);
           }
         },
@@ -741,127 +688,5 @@ export class OrderEntryComponent implements OnInit {
 
   onBreadcrumbNavigate(page: string): void {
     this.router.navigate([`/${page}`]);
-  }
-
-  fetchAssistants(): void {
-    const assistantRoleId = this.configService.getAssistantRoleId();
-    this.userService.getAllUsers('Y', assistantRoleId).subscribe({
-      next: (users) => {
-        this.assistants = users.map((user: any) => ({
-          id: user.userId,
-          name: user.fullName,
-          email: user.email,
-          phone: user.phone
-        }));
-      },
-      error: (error) => {
-        console.error('Error fetching assistants:', error);
-        this.assistants = [];
-      }
-    });
-  }
-
-  openAssignModal(order: Order): void {
-    this.assigningOrder = order;
-    this.assignmentData = {
-      assistantId: null,
-      reportingDate: order.operationDate || this.getCurrentDate(),
-      reportingTime: '09:00',
-      notes: ''
-    };
-    this.assignModalOpen = true;
-  }
-
-  closeAssignModal(): void {
-    this.assignModalOpen = false;
-    this.assigningOrder = null;
-    this.existingAssignments = [];
-    this.assignmentData = {
-      assistantId: null,
-      reportingDate: this.getCurrentDate(),
-      reportingTime: '09:00',
-      notes: ''
-    };
-  }
-
-  onAssistantChange(): void {
-    this.fetchExistingAssignments();
-  }
-
-  onReportingDateChange(): void {
-    this.fetchExistingAssignments();
-  }
-
-  private fetchExistingAssignments(): void {
-    if (this.assignmentData.reportingDate) {
-      // Fetch assignments for the date, optionally filtered by assistant
-      this.assistantAssignmentService.getExistingAssignmentsByDate(
-        this.assignmentData.assistantId,
-        this.assignmentData.reportingDate
-      ).subscribe({
-        next: (assignments) => {
-          this.existingAssignments = assignments;
-        },
-        error: (error) => {
-          console.error('Error fetching existing assignments:', error);
-          this.existingAssignments = [];
-        }
-      });
-    } else {
-      this.existingAssignments = [];
-    }
-  }
-
-  handleAssignAssistant(): void {
-    if (!this.assignmentData.assistantId) {
-      this.toastService.warning('Please select an assistant');
-      return;
-    }
-
-    if (!this.assigningOrder) {
-      return;
-    }
-
-    this.assistantAssignmentService.assignAssistant(
-      this.assigningOrder.id,
-      this.assignmentData.assistantId,
-      this.assignmentData.reportingDate,
-      this.assignmentData.reportingTime,
-      this.assignmentData.notes,
-      0 // assignedBy - can be updated to use current logged-in user ID
-    ).subscribe({
-      next: (response) => {
-        if (response.success) {
-          this.toastService.success(response.message || 'Assistant assigned successfully');
-          this.closeAssignModal();
-          this.fetchOrders(); // Refresh orders to show updated status
-        } else {
-          this.toastService.error(response.message || 'Failed to assign assistant');
-        }
-      },
-      error: (error) => {
-        console.error('Error assigning assistant:', error);
-        this.toastService.error('Failed to assign assistant');
-      }
-    });
-  }
-
-  handleUnassign(order: Order): void {
-    const confirmed = confirm(`Are you sure you want to unassign the assistant from order ${order.orderNo}?`);
-    
-    if (!confirmed) {
-      return;
-    }
-
-    this.assistantAssignmentService.unassignAssistant(order.id).subscribe({
-      next: (response) => {
-        this.toastService.success(response.message || 'Assistant unassigned successfully');
-        this.fetchOrders(); // Refresh orders to show updated status
-      },
-      error: (error) => {
-        console.error('Error unassigning assistant:', error);
-        this.toastService.error('Failed to unassign assistant');
-      }
-    });
   }
 }

@@ -11,6 +11,13 @@ export interface Assistant {
   email: string;
 }
 
+export interface OrderItem {
+  id: string;
+  name: string;
+  manual?: boolean;
+  isGroup?: boolean;
+}
+
 export interface AssistantAssignment {
   id: number;
   orderNo: string;
@@ -26,6 +33,8 @@ export interface AssistantAssignment {
   reportingTime: string | null;
   remarks: string;
   status: 'Pending' | 'Assigned';
+  itemGroups?: string[];
+  items?: OrderItem[];
 }
 
 export interface ExistingAssignment {
@@ -59,10 +68,30 @@ export class AssistantAssignmentService {
   constructor(private apiService: ApiService) {}
 
   getAssignments(status?: string): Observable<AssistantAssignment[]> {
-    return this.apiService.get<ApiResponse<AssistantAssignment[]>>(
+    return this.apiService.get<ApiResponse<any[]>>(
       ENDPOINTS.ASSISTANT_ASSIGNMENTS.LIST(status)
     ).pipe(
-      map(response => response.data || [])
+      map(response => {
+        const data = response.data || [];
+        return data.map((assignment: any) => ({
+          id: assignment.id,
+          orderNo: assignment.orderNo,
+          patient: assignment.patient,
+          operationDate: assignment.operationDate,
+          operationTime: assignment.operationTime,
+          doctorId: assignment.doctorId,
+          doctorName: assignment.doctorName,
+          hospitalId: assignment.hospitalId,
+          hospitalName: assignment.hospitalName,
+          assistantId: assignment.assistantId,
+          assistantName: assignment.assistantName,
+          reportingTime: assignment.reportingTime,
+          remarks: assignment.remarks,
+          status: assignment.status,
+          itemGroups: assignment.itemGroups || [],
+          items: assignment.items || []
+        }));
+      })
     );
   }
 

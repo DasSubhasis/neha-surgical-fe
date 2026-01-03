@@ -13,6 +13,7 @@ import { BrandService, Brand } from '../../services/brand.service';
 import { SizeService, Size } from '../../services/size.service';
 import { SpecificationService, Specification } from '../../services/specification.service';
 import { ItemGroupService, ItemGroup } from '../../services/item-group.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-item',
@@ -76,11 +77,10 @@ export class ItemComponent implements OnInit {
 
   // AG Grid column definitions
   columnDefs: ColDef[] = [
-    { headerName: 'Name', field: 'name', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 190 },
-    { headerName: 'Size', field: 'sizeName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 260 },
+    { headerName: 'Item Group', field: 'itemGroupName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 250 },
     { headerName: 'Brand', field: 'brandName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 160 },
-    { headerName: 'Item Group', field: 'itemGroupName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
-    { headerName: 'Model/Part No.', field: 'model', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 180 },
+    { headerName: 'Category', field: 'categoryName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
+    { headerName: 'Item Name', field: 'name', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 190 },
     {
       headerName: 'Price',
       field: 'price',
@@ -179,7 +179,8 @@ export class ItemComponent implements OnInit {
     private sizeService: SizeService,
     private specificationService: SpecificationService,
     private itemGroupService: ItemGroupService,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -457,12 +458,38 @@ export class ItemComponent implements OnInit {
            this.formData.price < 0;
   }
 
+  isDuplicateItem(): boolean {
+    // Check if an item with the same key fields already exists
+    const duplicate = this.items.find(item => {
+      // Skip checking against itself when editing
+      if (this.editingItem && item.id === this.editingItem.id) {
+        return false;
+      }
+      
+      // Check for duplicate based on name, brand, category, specification, and size
+      return item.name?.toLowerCase().trim() === this.formData.name?.toLowerCase().trim() &&
+             item.brandId === this.formData.brandId &&
+             item.categoryId === this.formData.categoryId &&
+             item.specificationId === this.formData.specificationId &&
+             item.sizeId === this.formData.sizeId;
+    });
+    
+    return !!duplicate;
+  }
+
   handleSaveItem(): void {
     // Validation
     if (!this.formData.name?.trim() || !this.formData.shortname?.trim() || 
         !this.formData.brandId || !this.formData.categoryId || 
         this.formData.price == null || this.formData.price < 0) {
       console.error('All required fields must be filled!');
+      this.toastService.error('All required fields must be filled!');
+      return;
+    }
+
+    // Check for duplicates
+    if (this.isDuplicateItem()) {
+      this.toastService.error('An item with the same Name, Brand, Category, Specification, and Size already exists!');
       return;
     }
 
