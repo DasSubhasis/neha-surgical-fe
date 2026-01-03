@@ -153,7 +153,7 @@
           </div>
           <div *ngFor="let s of assistantSchedule" class="p-2 border rounded bg-white mb-2">
             <div class="text-xs font-bold text-indigo-800">{{ s.orderNo }}</div>
-            <div class="text-sm">{{ s.startTime }} – {{ s.endTime }}</div>
+            <div class="text-sm">{{ s.reportingTime }} – {{ s.operationTime }}</div>
             <div class="text-xs text-red-700">May conflict within ±1 hour travel window</div>
           </div>
         </div>

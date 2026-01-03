@@ -12,7 +12,9 @@ import { DoctorService, Doctor } from '../../services/doctor.service';
 import { HospitalService, Hospital } from '../../services/hospital.service';
 import { ItemGroupService, ItemGroup as ItemGroupType } from '../../services/item-group.service';
 import { ItemService, Item } from '../../services/item.service';
-import { AssistantAssignmentService, Assistant } from '../../services/assistant-assignment.service';
+import { AssistantAssignmentService, Assistant, ExistingAssignment } from '../../services/assistant-assignment.service';
+import { UserService } from '../../services/user.service';
+import { ConfigService } from '../../services/config.service';
 import { ToastService } from '../../services/toast.service';
 import { forkJoin } from 'rxjs';
 
@@ -56,8 +58,9 @@ export class OrderEntryComponent implements OnInit {
   viewGroupItemsData: ItemGroup | null = null;
   assignModalOpen: boolean = false;
   assigningOrder: Order | null = null;
+  existingAssignments: ExistingAssignment[] = [];
   assignmentData: {
-    assistantId: string | null;
+    assistantId: number | null;
     reportingDate: string;
     reportingTime: string;
     notes: string;
@@ -186,12 +189,24 @@ export class OrderEntryComponent implements OnInit {
         const container = document.createElement('div');
         container.className = 'flex items-center justify-center w-full h-full space-x-1';
         
-        // Assign button
-        const assignBtn = document.createElement('button');
-        assignBtn.className = 'flex items-center justify-center text-purple-600 hover:text-purple-900 p-1 hover:bg-purple-50 rounded transition-colors duration-200';
-        assignBtn.title = 'Assign Assistant';
-        assignBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>`;
-        assignBtn.addEventListener('click', () => this.openAssignModal(params.data));
+        // Assign/Unassign button
+        if (params.data.assistantName) {
+          // Unassign button (shown when assistant is assigned)
+          const unassignBtn = document.createElement('button');
+          unassignBtn.className = 'flex items-center justify-center text-orange-600 hover:text-orange-900 p-1 hover:bg-orange-50 rounded transition-colors duration-200';
+          unassignBtn.title = 'Unassign Assistant';
+          unassignBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"/></svg>`;
+          unassignBtn.addEventListener('click', () => this.handleUnassign(params.data));
+          container.appendChild(unassignBtn);
+        } else {
+          // Assign button (shown when no assistant assigned)
+          const assignBtn = document.createElement('button');
+          assignBtn.className = 'flex items-center justify-center text-purple-600 hover:text-purple-900 p-1 hover:bg-purple-50 rounded transition-colors duration-200';
+          assignBtn.title = 'Assign Assistant';
+          assignBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>`;
+          assignBtn.addEventListener('click', () => this.openAssignModal(params.data));
+          container.appendChild(assignBtn);
+        }
 
         // Edit button
         const editBtn = document.createElement('button');
@@ -214,7 +229,6 @@ export class OrderEntryComponent implements OnInit {
         deleteBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
         deleteBtn.addEventListener('click', () => this.confirmDelete(params.data));
 
-        container.appendChild(assignBtn);
         container.appendChild(editBtn);
         container.appendChild(viewBtn);
         container.appendChild(deleteBtn);
@@ -261,6 +275,8 @@ export class OrderEntryComponent implements OnInit {
     private itemGroupService: ItemGroupService,
     private itemService: ItemService,
     private assistantAssignmentService: AssistantAssignmentService,
+    private userService: UserService,
+    private configService: ConfigService,
     private toastService: ToastService,
     private router: Router
   ) {}
@@ -292,6 +308,11 @@ export class OrderEntryComponent implements OnInit {
     const year = date.getFullYear();
     
     return `${day}-${month}-${year}`;
+  }
+
+  formatTime(timeString: string | undefined): string {
+    if (!timeString) return '';
+    return timeString;
   }
 
   getItemGroupNames(itemGroupNames: string[]): string {
@@ -723,12 +744,19 @@ export class OrderEntryComponent implements OnInit {
   }
 
   fetchAssistants(): void {
-    this.assistantAssignmentService.getAssistants().subscribe({
-      next: (data) => {
-        this.assistants = data;
+    const assistantRoleId = this.configService.getAssistantRoleId();
+    this.userService.getAllUsers('Y', assistantRoleId).subscribe({
+      next: (users) => {
+        this.assistants = users.map((user: any) => ({
+          id: user.userId,
+          name: user.fullName,
+          email: user.email,
+          phone: user.phone
+        }));
       },
       error: (error) => {
         console.error('Error fetching assistants:', error);
+        this.assistants = [];
       }
     });
   }
@@ -747,12 +775,41 @@ export class OrderEntryComponent implements OnInit {
   closeAssignModal(): void {
     this.assignModalOpen = false;
     this.assigningOrder = null;
+    this.existingAssignments = [];
     this.assignmentData = {
       assistantId: null,
       reportingDate: this.getCurrentDate(),
       reportingTime: '09:00',
       notes: ''
     };
+  }
+
+  onAssistantChange(): void {
+    this.fetchExistingAssignments();
+  }
+
+  onReportingDateChange(): void {
+    this.fetchExistingAssignments();
+  }
+
+  private fetchExistingAssignments(): void {
+    if (this.assignmentData.reportingDate) {
+      // Fetch assignments for the date, optionally filtered by assistant
+      this.assistantAssignmentService.getExistingAssignmentsByDate(
+        this.assignmentData.assistantId,
+        this.assignmentData.reportingDate
+      ).subscribe({
+        next: (assignments) => {
+          this.existingAssignments = assignments;
+        },
+        error: (error) => {
+          console.error('Error fetching existing assignments:', error);
+          this.existingAssignments = [];
+        }
+      });
+    } else {
+      this.existingAssignments = [];
+    }
   }
 
   handleAssignAssistant(): void {
@@ -765,18 +822,19 @@ export class OrderEntryComponent implements OnInit {
       return;
     }
 
-    const reportingDateTime = `${this.assignmentData.reportingDate} ${this.assignmentData.reportingTime}`;
-
     this.assistantAssignmentService.assignAssistant(
       this.assigningOrder.id,
       this.assignmentData.assistantId,
-      reportingDateTime,
-      this.assignmentData.notes
+      this.assignmentData.reportingDate,
+      this.assignmentData.reportingTime,
+      this.assignmentData.notes,
+      0 // assignedBy - can be updated to use current logged-in user ID
     ).subscribe({
       next: (response) => {
         if (response.success) {
           this.toastService.success(response.message || 'Assistant assigned successfully');
           this.closeAssignModal();
+          this.fetchOrders(); // Refresh orders to show updated status
         } else {
           this.toastService.error(response.message || 'Failed to assign assistant');
         }
@@ -784,6 +842,25 @@ export class OrderEntryComponent implements OnInit {
       error: (error) => {
         console.error('Error assigning assistant:', error);
         this.toastService.error('Failed to assign assistant');
+      }
+    });
+  }
+
+  handleUnassign(order: Order): void {
+    const confirmed = confirm(`Are you sure you want to unassign the assistant from order ${order.orderNo}?`);
+    
+    if (!confirmed) {
+      return;
+    }
+
+    this.assistantAssignmentService.unassignAssistant(order.id).subscribe({
+      next: (response) => {
+        this.toastService.success(response.message || 'Assistant unassigned successfully');
+        this.fetchOrders(); // Refresh orders to show updated status
+      },
+      error: (error) => {
+        console.error('Error unassigning assistant:', error);
+        this.toastService.error('Failed to unassign assistant');
       }
     });
   }

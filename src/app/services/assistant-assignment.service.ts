@@ -1,10 +1,14 @@
 import { Injectable } from '@angular/core';
-import { Observable, of, delay } from 'rxjs';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { ApiService, ApiResponse } from './api.service';
+import { ENDPOINTS } from '../config/api.config';
 
 export interface Assistant {
-  id: string;
+  id: number;
   name: string;
   phone: string;
+  email: string;
 }
 
 export interface AssistantAssignment {
@@ -13,7 +17,11 @@ export interface AssistantAssignment {
   patient: string;
   operationDate: string;
   operationTime: string;
-  assistantId: string | null;
+  doctorId?: number;
+  doctorName?: string;
+  hospitalId?: number;
+  hospitalName?: string;
+  assistantId: number | null;
   assistantName: string | null;
   reportingTime: string | null;
   remarks: string;
@@ -22,141 +30,92 @@ export interface AssistantAssignment {
 
 export interface ExistingAssignment {
   id: number;
-  assistantId: string;
+  orderId: number;
   orderNo: string;
-  date: string;
-  startTime: string;
-  endTime: string;
+  assistantId: number;
+  assistantName: string;
+  reportingDate: string;
+  reportingTime: string;
+  operationDate: string;
+  operationTime: string;
+  doctorName: string;
+  hospitalName: string;
+  remarks: string;
+}
+
+export interface AssignAssistantRequest {
+  orderId: number;
+  assistantId: number;
+  reportingDate: string;
+  reportingTime: string;
+  remarks: string;
+  assignedBy: number;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class AssistantAssignmentService {
-  private assistants: Assistant[] = [
-    { id: 'A1', name: 'Rahul Kumar', phone: '+91-9000000001' },
-    { id: 'A2', name: 'Priya Sharma', phone: '+91-9000000002' },
-    { id: 'A3', name: 'Amit Verma', phone: '+91-9000000003' }
-  ];
+  constructor(private apiService: ApiService) {}
 
-  private assignments: AssistantAssignment[] = [
-    {
-      id: 1002,
-      orderNo: 'ORD-1002',
-      patient: 'Mr. X',
-      operationDate: '2025-12-04',
-      operationTime: '10:30',
-      assistantId: null,
-      assistantName: null,
-      reportingTime: null,
-      remarks: '',
-      status: 'Pending'
-    },
-    {
-      id: 1003,
-      orderNo: 'ORD-1003',
-      patient: 'Ms. Y',
-      operationDate: '2025-12-06',
-      operationTime: '09:15',
-      assistantId: 'A2',
-      assistantName: 'Priya Sharma',
-      reportingTime: '08:45',
-      remarks: 'Pre-op briefing',
-      status: 'Assigned'
-    },
-    {
-      id: 1004,
-      orderNo: 'ORD-1004',
-      patient: 'Mrs. Z',
-      operationDate: '2025-12-09',
-      operationTime: '12:45',
-      assistantId: null,
-      assistantName: null,
-      reportingTime: null,
-      remarks: '',
-      status: 'Pending'
-    },
-    {
-      id: 1005,
-      orderNo: 'ORD-1005',
-      patient: 'Mr. A',
-      operationDate: '2025-12-09',
-      operationTime: '08:30',
-      assistantId: 'A1',
-      assistantName: 'Rahul Kumar',
-      reportingTime: '15:45',
-      remarks: 'Critical case',
-      status: 'Assigned'
-    },
-    {
-      id: 1006,
-      orderNo: 'ORD-1006',
-      patient: 'Ms. B',
-      operationDate: '2025-12-10',
-      operationTime: '16:00',
-      assistantId: null,
-      assistantName: null,
-      reportingTime: null,
-      remarks: '',
-      status: 'Pending'
-    }
-  ];
-
-  private existingAssignments: ExistingAssignment[] = [
-    { id: 1, assistantId: 'A1', orderNo: 'ORD-1002', date: '2025-11-25', startTime: '10:00', endTime: '12:00' },
-    { id: 2, assistantId: 'A1', orderNo: 'ORD-1003', date: '2025-11-26', startTime: '13:00', endTime: '15:00' },
-    { id: 3, assistantId: 'A2', orderNo: 'ORD-1004', date: '2025-11-25', startTime: '08:30', endTime: '10:30' },
-    { id: 4, assistantId: 'A2', orderNo: 'ORD-1005', date: '2025-11-27', startTime: '09:00', endTime: '11:00' },
-    { id: 5, assistantId: 'A3', orderNo: 'ORD-1006', date: '2025-11-27', startTime: '11:00', endTime: '13:00' }
-  ];
-
-  getAssignments(): Observable<AssistantAssignment[]> {
-    return of([...this.assignments]).pipe(delay(300));
+  getAssignments(status?: string): Observable<AssistantAssignment[]> {
+    return this.apiService.get<ApiResponse<AssistantAssignment[]>>(
+      ENDPOINTS.ASSISTANT_ASSIGNMENTS.LIST(status)
+    ).pipe(
+      map(response => response.data || [])
+    );
   }
 
   getAssistants(): Observable<Assistant[]> {
-    return of([...this.assistants]).pipe(delay(200));
+    return this.apiService.get<ApiResponse<Assistant[]>>(
+      ENDPOINTS.ASSISTANT_ASSIGNMENTS.ASSISTANTS
+    ).pipe(
+      map(response => response.data || [])
+    );
   }
 
-  getExistingAssignments(): Observable<ExistingAssignment[]> {
-    return of([...this.existingAssignments]).pipe(delay(200));
+  getExistingAssignments(assistantId: number): Observable<ExistingAssignment[]> {
+    return this.apiService.get<ApiResponse<ExistingAssignment[]>>(
+      ENDPOINTS.ASSISTANT_ASSIGNMENTS.EXISTING(assistantId)
+    ).pipe(
+      map(response => response.data || [])
+    );
+  }
+
+  getExistingAssignmentsByDate(assistantId: number | null, date: string): Observable<ExistingAssignment[]> {
+    return this.apiService.get<ApiResponse<ExistingAssignment[]>>(
+      ENDPOINTS.ASSISTANT_ASSIGNMENTS.EXISTING_BY_DATE(assistantId, date)
+    ).pipe(
+      map(response => response.data || [])
+    );
   }
 
   assignAssistant(
     orderId: number,
-    assistantId: string,
+    assistantId: number,
+    reportingDate: string,
     reportingTime: string,
-    remarks: string
+    remarks: string,
+    assignedBy: number = 0
   ): Observable<{ success: boolean; message: string; data?: AssistantAssignment }> {
-    const index = this.assignments.findIndex(a => a.id === orderId);
-    
-    if (index !== -1) {
-      const assistant = this.assistants.find(a => a.id === assistantId);
-      
-      this.assignments[index] = {
-        ...this.assignments[index],
-        assistantId,
-        assistantName: assistant?.name || null,
-        reportingTime,
-        remarks,
-        status: 'Assigned'
-      };
+    const payload: AssignAssistantRequest = {
+      orderId,
+      assistantId,
+      reportingDate,
+      reportingTime,
+      remarks,
+      assignedBy
+    };
 
-      // Simulate WhatsApp notifications
-      console.log(`WA -> ${assistant?.name} (${assistant?.phone}): Assigned to ${this.assignments[index].orderNo} on ${this.assignments[index].operationDate} at ${this.assignments[index].operationTime} — reporting ${reportingTime}`);
-      console.log(`WA -> Doctor: (simulated) Assistant assigned for ${this.assignments[index].orderNo}`);
-      console.log(`WA -> Officials: (simulated) Assistant assigned for ${this.assignments[index].orderNo}`);
+    return this.apiService.post<any>(
+      ENDPOINTS.ASSISTANT_ASSIGNMENTS.ASSIGN,
+      payload
+    );
+  }
 
-      return of({
-        success: true,
-        message: 'Assistant assigned successfully',
-        data: this.assignments[index]
-      }).pipe(delay(300));
-    }
-
-    return of({
-      success: false,
-      message: 'Assignment not found'
-    }).pipe(delay(300));
+  unassignAssistant(orderId: number): Observable<ApiResponse> {
+    return this.apiService.delete<ApiResponse>(
+      ENDPOINTS.ASSISTANT_ASSIGNMENTS.UNASSIGN(orderId)
+    );
   }
 }

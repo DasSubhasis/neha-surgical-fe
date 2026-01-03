@@ -48,7 +48,7 @@ export class AssistantAssignmentComponent implements OnInit {
 
   // Assignment form data
   selectedOrder: AssistantAssignment | null = null;
-  selectedAssistant: string = '';
+  selectedAssistant: number | null = null;
   reportingTime: string = '';
   remarks: string = '';
   overrideConfirmed: boolean = false;
@@ -198,12 +198,6 @@ export class AssistantAssignmentComponent implements OnInit {
       next: (data) => this.assistants = data,
       error: (error) => console.error('Error fetching assistants:', error)
     });
-
-    // Load existing assignments for conflict checking
-    this.assistantAssignmentService.getExistingAssignments().subscribe({
-      next: (data) => this.existingAssignments = data,
-      error: (error) => console.error('Error fetching existing assignments:', error)
-    });
   }
 
   retryFetch(): void {
@@ -222,7 +216,7 @@ export class AssistantAssignmentComponent implements OnInit {
 
   openAssignModal(order: AssistantAssignment): void {
     this.selectedOrder = order;
-    this.selectedAssistant = order.assistantId || '';
+    this.selectedAssistant = order.assistantId || null;
     this.reportingTime = order.reportingTime || order.operationTime;
     this.remarks = order.remarks || '';
     this.overrideConfirmed = false;
@@ -233,7 +227,7 @@ export class AssistantAssignmentComponent implements OnInit {
   closeAssignModal(): void {
     this.isAssignModalOpen = false;
     this.selectedOrder = null;
-    this.selectedAssistant = '';
+    this.selectedAssistant = null;
     this.reportingTime = '';
     this.remarks = '';
     this.overrideConfirmed = false;
@@ -246,15 +240,25 @@ export class AssistantAssignmentComponent implements OnInit {
 
   updateAssistantSchedule(): void {
     if (this.selectedAssistant && this.selectedOrder) {
-      this.assistantSchedule = this.getSchedule(this.selectedAssistant, this.selectedOrder.operationDate);
+      // Fetch existing assignments for the selected assistant
+      this.assistantAssignmentService.getExistingAssignments(this.selectedAssistant).subscribe({
+        next: (data) => {
+          this.existingAssignments = data;
+          this.assistantSchedule = this.getSchedule(this.selectedAssistant!, this.selectedOrder!.operationDate);
+        },
+        error: (error) => {
+          console.error('Error fetching existing assignments:', error);
+          this.assistantSchedule = [];
+        }
+      });
     } else {
       this.assistantSchedule = [];
     }
   }
 
-  getSchedule(assistantId: string, date: string): ExistingAssignment[] {
+  getSchedule(assistantId: number, date: string): ExistingAssignment[] {
     return this.existingAssignments.filter(
-      x => x.assistantId === assistantId && x.date === date
+      x => x.assistantId === assistantId && x.operationDate === date
     );
   }
 
@@ -264,13 +268,13 @@ export class AssistantAssignmentComponent implements OnInit {
     return (Number.isFinite(hh) ? hh : 0) * 60 + (Number.isFinite(mm) ? mm : 0);
   }
 
-  checkConflicts(assistantId: string, date: string, time: string): ExistingAssignment[] {
+  checkConflicts(assistantId: number, date: string, time: string): ExistingAssignment[] {
     const sched = this.getSchedule(assistantId, date);
     const t = this.parseTime(time);
     
     return sched.filter(s => {
-      const start = this.parseTime(s.startTime);
-      const end = this.parseTime(s.endTime);
+      const start = this.parseTime(s.reportingTime);
+      const end = this.parseTime(s.operationTime);
       const overlap = t >= start && t <= end;
       const travel = t >= start - 60 && t <= end + 60;
       return overlap || travel;
@@ -324,9 +328,11 @@ export class AssistantAssignmentComponent implements OnInit {
     // Perform assignment
     this.assistantAssignmentService.assignAssistant(
       this.selectedOrder.id,
-      this.selectedAssistant,
+      this.selectedAssistant!,
+      this.selectedOrder.operationDate,
       this.reportingTime,
-      this.remarks
+      this.remarks,
+      0 // assignedBy - can be updated to use current logged-in user ID
     ).subscribe({
       next: (response) => {
         if (response.success && response.data) {

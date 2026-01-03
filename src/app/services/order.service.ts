@@ -62,14 +62,54 @@ export class OrderService {
   constructor(private apiService: ApiService) {}
 
   getOrders(): Observable<Order[]> {
-    return this.apiService.get<ApiResponse<Order[]>>(ENDPOINTS.ORDERS.LIST).pipe(
-      map(response => response.data || [])
+    return this.apiService.get<ApiResponse<any[]>>(ENDPOINTS.ORDERS.LIST).pipe(
+      map(response => {
+        const orders = response.data || [];
+        return orders.map((order: any) => ({
+          id: order.orderId || order.id,
+          orderNo: order.orderNo,
+          orderDate: order.orderDate,
+          doctorId: order.doctorId,
+          doctorName: order.doctorName,
+          hospitalId: order.hospitalId,
+          hospitalName: order.hospitalName,
+          operationDate: order.operationDate,
+          operationTime: order.operationTime,
+          materialSendDate: order.materialSendDate,
+          itemGroups: order.itemGroups || [],
+          items: order.items || [],
+          remarks: order.remarks || '',
+          createdBy: order.createdBy || '',
+          status: order.status || 'Draft',
+          audits: order.audits || []
+        }));
+      })
     );
   }
 
   getOrder(id: string | number): Observable<Order> {
-    return this.apiService.get<ApiResponse<Order>>(ENDPOINTS.ORDERS.GET(id)).pipe(
-      map(response => response.data!)
+    return this.apiService.get<ApiResponse<any>>(ENDPOINTS.ORDERS.GET(id)).pipe(
+      map(response => {
+        const order = response.data!;
+        return {
+          id: order.orderId || order.id,
+          orderNo: order.orderNo,
+          orderDate: order.orderDate,
+          doctorId: order.doctorId,
+          doctorName: order.doctorName,
+          hospitalId: order.hospitalId,
+          hospitalName: order.hospitalName,
+          operationDate: order.operationDate,
+          operationTime: order.operationTime,
+          materialSendDate: order.materialSendDate,
+          itemGroups: order.itemGroups || [],
+          items: order.items || [],
+          remarks: order.remarks || '',
+          createdBy: order.createdBy || '',
+          status: order.status || 'Draft',
+          audits: order.audits || []
+        };
+      })
     );
   }
 

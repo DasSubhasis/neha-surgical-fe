@@ -442,7 +442,7 @@
 
   <!-- Assign Assistant Modal -->
   <div *ngIf="assignModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-30 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-5xl">
       <!-- Header -->
       <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 rounded-t-xl flex justify-between items-center">
         <h3 class="text-lg font-semibold text-white">Assign Assistant</h3>
@@ -453,68 +453,155 @@
         </button>
       </div>
 
-      <!-- Body -->
-      <div class="p-6 space-y-4">
-        <div *ngIf="assigningOrder" class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4">
-          <div class="text-xs font-semibold text-indigo-800 mb-1">Order Details</div>
-          <div class="text-sm text-gray-700">
-            <span class="font-medium">{{ assigningOrder.orderNo }}</span> - {{ assigningOrder.doctorName }}
+      <!-- Body - Two Column Layout -->
+      <div class="p-6 grid grid-cols-2 gap-6">
+        <!-- Left Column - Assignment Form -->
+        <div class="space-y-4">
+          <div *ngIf="assigningOrder" class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+            <div class="text-xs font-semibold text-indigo-800 mb-1">Order Details</div>
+            <div class="text-sm text-gray-700">
+              <span class="font-medium">{{ assigningOrder.orderNo }}</span> - {{ assigningOrder.doctorName }}
+            </div>
+            <div class="text-xs text-gray-600 mt-1">
+              Operation: {{ formatDate(assigningOrder.operationDate) }} {{ assigningOrder.operationTime }}
+            </div>
           </div>
-          <div class="text-xs text-gray-600 mt-1">
-            Operation: {{ formatDate(assigningOrder.operationDate) }} {{ assigningOrder.operationTime }}
-          </div>
-        </div>
 
-        <!-- Assistant Selection -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Assistant <span class="text-red-500">*</span>
-          </label>
-          <app-searchable-dropdown
-            [(ngModel)]="assignmentData.assistantId"
-            [options]="assistants"
-            [idKey]="'id'"
-            [nameKey]="'name'"
-            [placeholder]="'Search and select assistant'"
-            [required]="true"
-          ></app-searchable-dropdown>
-        </div>
-
-        <!-- Reporting Date and Time -->
-        <div class="grid grid-cols-2 gap-3">
+          <!-- Assistant Selection -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Reporting Date</label>
-            <input 
-              type="date" 
-              [(ngModel)]="assignmentData.reportingDate"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200"
-            />
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Assistant <span class="text-red-500">*</span>
+            </label>
+            <app-searchable-dropdown
+              [(ngModel)]="assignmentData.assistantId"
+              (ngModelChange)="onAssistantChange()"
+              [options]="assistants"
+              [idKey]="'id'"
+              [nameKey]="'name'"
+              [placeholder]="'Search and select assistant'"
+              [required]="true"
+            ></app-searchable-dropdown>
           </div>
+
+          <!-- Reporting Date and Time -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Reporting Date</label>
+              <input 
+                type="date" 
+                [(ngModel)]="assignmentData.reportingDate"
+                (ngModelChange)="onReportingDateChange()"
+                [min]="assigningOrder?.orderDate"
+                [max]="assigningOrder?.operationDate"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Reporting Time</label>
+              <input 
+                type="time" 
+                [(ngModel)]="assignmentData.reportingTime"
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+              />
+            </div>
+          </div>
+
+          <!-- Notes -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Reporting Time</label>
-            <input 
-              type="time" 
-              [(ngModel)]="assignmentData.reportingTime"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200"
-            />
+            <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+            <textarea 
+              [(ngModel)]="assignmentData.notes"
+              rows="4"
+              maxlength="500"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200 resize-none"
+              placeholder="Add any special instructions or notes..."
+            ></textarea>
           </div>
         </div>
 
-        <!-- Notes -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-          <textarea 
-            [(ngModel)]="assignmentData.notes"
-            rows="3"
-            maxlength="500"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200 resize-none"
-            placeholder="Add any special instructions or notes..."
-          ></textarea>
+        <!-- Right Column - Existing Assignments -->
+        <div class="border-l border-gray-200 pl-6">
+          <div class="text-sm font-semibold text-gray-800 mb-3">
+            Existing Assignments
+            <span *ngIf="assignmentData.reportingDate" class="text-xs font-normal text-gray-600 ml-2">
+              on {{ formatDate(assignmentData.reportingDate) }}
+            </span>
+            <span *ngIf="assignmentData.assistantId" class="text-xs font-normal text-gray-600 ml-2">
+              (Filtered by selected assistant)
+            </span>
+          </div>
+          
+          <div *ngIf="!assignmentData.reportingDate" class="flex items-center justify-center h-64 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div class="text-center text-gray-500">
+              <svg class="w-12 h-12 mx-auto mb-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              <p class="text-sm">Select a reporting date to view assignments</p>
+            </div>
+          </div>
+
+          <div *ngIf="assignmentData.reportingDate && existingAssignments.length === 0" class="flex items-center justify-center h-64 bg-green-50 rounded-lg border border-green-200">
+            <div class="text-center text-green-700">
+              <svg class="w-12 h-12 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p class="text-sm font-medium">No assignments on this date</p>
+              <p class="text-xs text-green-600 mt-1" *ngIf="assignmentData.assistantId">Assistant is available</p>
+              <p class="text-xs text-green-600 mt-1" *ngIf="!assignmentData.assistantId">No assistants assigned on this date</p>
+            </div>
+          </div>
+
+          <div *ngIf="existingAssignments.length > 0" class="space-y-2 max-h-80 overflow-y-auto pr-2">
+            <div *ngFor="let assignment of existingAssignments" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 hover:bg-yellow-100 transition-colors">
+              <div class="flex justify-between items-start mb-2">
+                <div class="text-sm font-semibold text-gray-800">{{ assignment.orderNo }}</div>
+                <div class="text-xs text-yellow-700 bg-yellow-200 px-2 py-1 rounded">Assigned</div>
+              </div>
+              <div class="space-y-1">
+                <div *ngIf="!assignmentData.assistantId" class="text-xs text-purple-700 flex items-center bg-purple-50 rounded px-2 py-1 mb-1">
+                  <svg class="w-3 h-3 mr-1 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span class="font-medium">Assistant:</span> {{ assignment.assistantName }}
+                </div>
+                <div class="text-xs text-gray-700 flex items-center">
+                  <svg class="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <span class="font-medium">Doctor:</span> {{ assignment.doctorName }}
+                </div>
+                <div class="text-xs text-gray-700 flex items-center">
+                  <svg class="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  <span class="font-medium">Hospital:</span> {{ assignment.hospitalName }}
+                </div>
+                <div class="text-xs text-gray-600 flex items-center mt-2 pt-2 border-t border-yellow-200">
+                  <svg class="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span class="font-medium">Reporting:</span> {{ formatDate(assignment.reportingDate) }} {{ formatTime(assignment.reportingTime) }}
+                </div>
+                <div class="text-xs text-gray-600 flex items-center">
+                  <svg class="w-3 h-3 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span class="font-medium">Operation:</span> {{ formatDate(assignment.operationDate) }} {{ formatTime(assignment.operationTime) }}
+                </div>
+                <div *ngIf="assignment.remarks" class="text-xs text-gray-600 italic mt-2 pt-2 border-t border-yellow-200">
+                  <svg class="w-3 h-3 mr-1 text-gray-500 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                  "{{ assignment.remarks }}"
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end space-x-3">
+      <div class="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end space-x-3 border-t border-gray-200">
         <button 
           (click)="closeAssignModal()" 
           class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"

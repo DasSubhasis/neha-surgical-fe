@@ -105,6 +105,17 @@ export const ENDPOINTS = {
     DELETE: (id: string | number) => `/Assistants/${id}`,
   },
 
+  // Assistant Assignment Management
+  ASSISTANT_ASSIGNMENTS: {
+    BASE: '/AssistantAssignments',
+    LIST: (status?: string) => `/AssistantAssignments${status ? `?status=${status}` : ''}`,
+    ASSISTANTS: '/AssistantAssignments/assistants',
+    EXISTING: (assistantId: number) => `/AssistantAssignments/existing/${assistantId}`,
+    EXISTING_BY_DATE: (assistantId: number | null, date: string) => `/AssistantAssignments/existing-by-date?${assistantId ? `assistantId=${assistantId}&` : ''}date=${date}`,
+    ASSIGN: '/AssistantAssignments/assign',
+    UNASSIGN: (orderId: number) => `/AssistantAssignments/${orderId}`,
+  },
+
   // Item Management
   ITEMS: {
     BASE: '/Items',
