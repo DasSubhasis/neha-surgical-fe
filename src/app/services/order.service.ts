@@ -43,7 +43,6 @@ export interface OrderAudit {
 }
 
 export interface OrderFormData {
-  orderNo: string;
   orderDate: string;
   doctorId: number | null;
   hospitalId: number | null;

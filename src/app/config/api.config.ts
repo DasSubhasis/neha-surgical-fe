@@ -155,6 +155,16 @@ export const ENDPOINTS = {
     DELETE: (id: string | number) => `/Specifications/${id}`,
   },
 
+  // Item Group Management
+  ITEM_GROUPS: {
+    BASE: '/ItemGroups',
+    LIST: '/ItemGroups',
+    GET: (id: string | number) => `/ItemGroups/${id}`,
+    CREATE: '/ItemGroups',
+    UPDATE: (id: string | number) => `/ItemGroups/${id}`,
+    DELETE: (id: string | number) => `/ItemGroups/${id}`,
+  },
+
   // Order Management
   ORDERS: {
     BASE: '/Orders',

@@ -12,6 +12,7 @@ import { CategoryService, Category } from '../../services/category.service';
 import { BrandService, Brand } from '../../services/brand.service';
 import { SizeService, Size } from '../../services/size.service';
 import { SpecificationService, Specification } from '../../services/specification.service';
+import { ItemGroupService, ItemGroup } from '../../services/item-group.service';
 
 @Component({
   selector: 'app-item',
@@ -55,6 +56,7 @@ export class ItemComponent implements OnInit {
     shortname: '',
     brandId: null,
     categoryId: null,
+    itemGroupId: null,
     specificationId: null,
     sizeId: null,
     material: '',
@@ -68,6 +70,7 @@ export class ItemComponent implements OnInit {
   // Dropdown options
   groupOptions: Brand[] = [];
   categoryOptions: Category[] = [];
+  itemGroupOptions: ItemGroup[] = [];
   sizeOptions: Size[] = [];
   specificationOptions: Specification[] = [];
 
@@ -76,6 +79,7 @@ export class ItemComponent implements OnInit {
     { headerName: 'Name', field: 'name', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 190 },
     { headerName: 'Size', field: 'sizeName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 260 },
     { headerName: 'Brand', field: 'brandName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 160 },
+    { headerName: 'Item Group', field: 'itemGroupName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
     { headerName: 'Model/Part No.', field: 'model', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 180 },
     {
       headerName: 'Price',
@@ -174,6 +178,7 @@ export class ItemComponent implements OnInit {
     private brandService: BrandService,
     private sizeService: SizeService,
     private specificationService: SpecificationService,
+    private itemGroupService: ItemGroupService,
     private router: Router
   ) {}
 
@@ -183,6 +188,7 @@ export class ItemComponent implements OnInit {
     // Load dropdown options
     this.fetchCategories();
     this.fetchBrands();
+    this.fetchItemGroups();
     this.fetchSizes();
     this.fetchSpecifications();
   }
@@ -255,6 +261,18 @@ export class ItemComponent implements OnInit {
       error: (error) => {
         console.error('Failed to fetch brands:', error);
         this.groupOptions = [];
+      }
+    });
+  }
+
+  fetchItemGroups(): void {
+    this.itemGroupService.getAllItemGroups('Y').subscribe({
+      next: (response) => {
+        this.itemGroupOptions = response;
+      },
+      error: (error) => {
+        console.error('Failed to fetch item groups:', error);
+        this.itemGroupOptions = [];
       }
     });
   }
@@ -345,6 +363,7 @@ export class ItemComponent implements OnInit {
       shortname: '',
       brandId: null,
       categoryId: null,
+      itemGroupId: null,
       specificationId: null,
       sizeId: null,
       material: '',
@@ -365,6 +384,7 @@ export class ItemComponent implements OnInit {
       shortname: '',
       brandId: null,
       categoryId: null,
+      itemGroupId: null,
       specificationId: null,
       sizeId: null,
       material: '',
@@ -383,6 +403,7 @@ export class ItemComponent implements OnInit {
       shortname: item.shortname || '',
       brandId: item.brandId || null,
       categoryId: item.categoryId || null,
+      itemGroupId: item.itemGroupId || null,
       specificationId: item.specificationId || null,
       sizeId: item.sizeId || null,
       material: item.material || '',
@@ -471,6 +492,8 @@ export class ItemComponent implements OnInit {
               brandName: this.groupOptions.find(g => g.brandId === this.formData.brandId)?.name || this.items[index].brandName,
               categoryId: this.formData.categoryId!,
               categoryName: this.categoryOptions.find(c => c.categoryId === this.formData.categoryId)?.name || this.items[index].categoryName,
+              itemGroupId: this.formData.itemGroupId || undefined,
+              itemGroupName: this.itemGroupOptions.find(ig => ig.itemGroupId === this.formData.itemGroupId)?.name,
               specificationId: this.formData.specificationId || undefined,
               specificationName: this.specificationOptions.find(s => s.specificationId === this.formData.specificationId)?.name,
               sizeId: this.formData.sizeId || undefined,
@@ -510,6 +533,8 @@ export class ItemComponent implements OnInit {
             brandName: this.groupOptions.find(g => g.brandId === this.formData.brandId)?.name || '',
             categoryId: this.formData.categoryId!,
             categoryName: this.categoryOptions.find(c => c.categoryId === this.formData.categoryId)?.name || '',
+            itemGroupId: this.formData.itemGroupId || undefined,
+            itemGroupName: this.itemGroupOptions.find(ig => ig.itemGroupId === this.formData.itemGroupId)?.name,
             specificationId: this.formData.specificationId || undefined,
             specificationName: this.specificationOptions.find(s => s.specificationId === this.formData.specificationId)?.name,
             sizeId: this.formData.sizeId || undefined,

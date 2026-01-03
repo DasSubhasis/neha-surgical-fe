@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService, ApiResponse } from './api.service';
 
 export interface Permission {
@@ -15,6 +16,7 @@ export interface Role {
   roleId?: number;
   name: string;
   description: string;
+  permissions?: number[];
   status: string;
   isActive: string;
   createdAt?: string;
@@ -23,6 +25,7 @@ export interface Role {
 export interface RoleFormData {
   name: string;
   description: string;
+  permissions?: number[];
   status: string;
   isActive: string;
 }
@@ -109,42 +112,48 @@ export class RoleService {
   /**
    * Get all roles
    */
-  getAllRoles(isActive: boolean = true): Observable<Role[]> {
-    const endpoint = `/Roles${isActive !== undefined ? `?isActive=${isActive}` : ''}`;
-    return this.apiService.get<Role[]>(endpoint);
+  getAllRoles(isActive?: string): Observable<Role[]> {
+    const endpoint = `/Roles${isActive ? `?isActive=${isActive}` : ''}`;
+    return this.apiService.get<ApiResponse<Role[]>>(endpoint).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**
    * Get a single role by ID
    */
   getRoleById(id: number): Observable<Role> {
-    return this.apiService.get<Role>(`/Roles/${id}`);
+    return this.apiService.get<ApiResponse<Role>>(`/Roles/${id}`).pipe(
+      map(response => response.data!)
+    );
   }
 
   /**
    * Create a new role
    */
-  createRole(roleData: RoleFormData): Observable<ApiResponse> {
+  createRole(roleData: RoleFormData): Observable<ApiResponse<Role>> {
     const payload = {
       name: roleData.name,
       description: roleData.description || '',
+      permissions: roleData.permissions || [],
       isActive: roleData.isActive || 'Y'
     };
 
-    return this.apiService.post<ApiResponse>('/Roles', payload);
+    return this.apiService.post<ApiResponse<Role>>('/Roles', payload);
   }
 
   /**
    * Update an existing role
    */
-  updateRole(id: number, roleData: RoleFormData): Observable<ApiResponse> {
+  updateRole(id: number, roleData: RoleFormData): Observable<ApiResponse<Role>> {
     const payload = {
       name: roleData.name,
       description: roleData.description || '',
+      permissions: roleData.permissions || [],
       isActive: roleData.isActive || 'Y'
     };
 
-    return this.apiService.put<ApiResponse>(`/Roles/${id}`, payload);
+    return this.apiService.put<ApiResponse<Role>>(`/Roles/${id}`, payload);
   }
 
   /**

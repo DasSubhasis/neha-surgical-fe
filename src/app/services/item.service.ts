@@ -13,6 +13,8 @@ export interface Item {
   brandName: string;
   categoryId: number;
   categoryName: string;
+  itemGroupId?: number;
+  itemGroupName?: string;
   specificationId?: number;
   specificationName?: string;
   sizeId?: number;
@@ -31,6 +33,7 @@ export interface ItemFormData {
   shortname: string;
   brandId: number | null;
   categoryId: number | null;
+  itemGroupId: number | null;
   specificationId: number | null;
   sizeId: number | null;
   material: string;
@@ -104,6 +107,7 @@ export class ItemService {
       shortname: data.shortname,
       brandId: data.brandId,
       categoryId: data.categoryId,
+      itemGroupId: data.itemGroupId || 0,
       specificationId: data.specificationId || 0,
       sizeId: data.sizeId || 0,
       material: data.material || '',
@@ -126,6 +130,7 @@ export class ItemService {
       shortname: data.shortname,
       brandId: data.brandId,
       categoryId: data.categoryId,
+      itemGroupId: data.itemGroupId || 0,
       specificationId: data.specificationId || 0,
       sizeId: data.sizeId || 0,
       material: data.material || '',
@@ -143,6 +148,15 @@ export class ItemService {
    */
   getItemsByBrand(brandId: number): Observable<Item[]> {
     return this.apiService.get<ApiResponse<Item[]>>(`/Items/brand/${brandId}`).pipe(
+      map(response => response.data || [])
+    );
+  }
+
+  /**
+   * Get items by item group ID
+   */
+  getItemsByItemGroup(itemGroupId: number): Observable<Item[]> {
+    return this.apiService.get<ApiResponse<Item[]>>(`/Items/itemgroup/${itemGroupId}`).pipe(
       map(response => response.data || [])
     );
   }

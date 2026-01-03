@@ -190,10 +190,10 @@ export class UserComponent implements OnInit {
   }
 
   fetchRoles(): void {
-    this.roleService.getAllRoles(true).subscribe({
-      next: (response) => {
-        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
-        this.roles = data.map((role: any) => ({
+    this.roleService.getAllRoles('Y').subscribe({
+      next: (roles) => {
+        console.log('Roles data:', roles);
+        this.roles = roles.map((role: any) => ({
           id: role.roleId || role.id,
           name: role.name,
           description: role.description,
@@ -201,6 +201,7 @@ export class UserComponent implements OnInit {
           status: role.isActive === 'Y' ? 'Active' : 'Inactive',
           isActive: role.isActive
         }));
+        console.log('Mapped roles:', this.roles);
       },
       error: (error) => {
         console.error('Failed to fetch roles:', error);

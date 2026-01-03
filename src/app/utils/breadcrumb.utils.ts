@@ -17,6 +17,7 @@ const pageHierarchy: { [key: string]: { parent: string | null; label: string } }
   'specification': { parent: 'master-data', label: 'Specification' },
   'size': { parent: 'master-data', label: 'Size' },
   'category': { parent: 'master-data', label: 'Category' },
+  'item-group': { parent: 'master-data', label: 'Item Group' },
   'user': { parent: 'master-data', label: 'User' },
   'menu': { parent: 'master-data', label: 'Menu' },
   'role': { parent: 'master-data', label: 'Role' },

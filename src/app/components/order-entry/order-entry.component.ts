@@ -10,8 +10,9 @@ import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-d
 import { OrderService, Order, OrderFormData, OrderItem, ItemGroup } from '../../services/order.service';
 import { DoctorService, Doctor } from '../../services/doctor.service';
 import { HospitalService, Hospital } from '../../services/hospital.service';
-import { BrandService, Brand } from '../../services/brand.service';
+import { ItemGroupService, ItemGroup as ItemGroupType } from '../../services/item-group.service';
 import { ItemService, Item } from '../../services/item.service';
+import { AssistantAssignmentService, Assistant } from '../../services/assistant-assignment.service';
 import { ToastService } from '../../services/toast.service';
 import { forkJoin } from 'rxjs';
 
@@ -36,8 +37,9 @@ export class OrderEntryComponent implements OnInit {
   orders: Order[] = [];
   doctors: Doctor[] = [];
   hospitals: Hospital[] = [];
-  brands: Brand[] = [];
+  itemGroups: ItemGroupType[] = [];
   allItems: Item[] = [];
+  assistants: Assistant[] = [];
   
   loading: boolean = false;
   gridReady: boolean = false;
@@ -52,10 +54,22 @@ export class OrderEntryComponent implements OnInit {
   editingOrder: Order | null = null;
   viewOrder: Order | null = null;
   viewGroupItemsData: ItemGroup | null = null;
+  assignModalOpen: boolean = false;
+  assigningOrder: Order | null = null;
+  assignmentData: {
+    assistantId: string | null;
+    reportingDate: string;
+    reportingTime: string;
+    notes: string;
+  } = {
+    assistantId: null,
+    reportingDate: this.getCurrentDate(),
+    reportingTime: '09:00',
+    notes: ''
+  };
 
   // Form data
   formData: OrderFormData = {
-    orderNo: '',
     orderDate: this.getCurrentDate(),
     doctorId: null,
     hospitalId: null,
@@ -70,7 +84,7 @@ export class OrderEntryComponent implements OnInit {
 
   // Items summary for modal
   itemsSummary: OrderItem[] = [];
-  selectedBrandIds: (number | undefined)[] = [];
+  selectedItemGroupIds: (number | undefined)[] = [];
   selectedAdditionalItemId: number | null = null;
 
   // Delete confirmation
@@ -160,9 +174,9 @@ export class OrderEntryComponent implements OnInit {
       field: 'actions',
       sortable: false,
       filter: false,
-      width: 90,
-      minWidth: 90,
-      maxWidth: 90,
+      width: 120,
+      minWidth: 120,
+      maxWidth: 120,
       resizable: false,
       pinned: 'right',
       suppressHeaderMenuButton: true,
@@ -172,6 +186,13 @@ export class OrderEntryComponent implements OnInit {
         const container = document.createElement('div');
         container.className = 'flex items-center justify-center w-full h-full space-x-1';
         
+        // Assign button
+        const assignBtn = document.createElement('button');
+        assignBtn.className = 'flex items-center justify-center text-purple-600 hover:text-purple-900 p-1 hover:bg-purple-50 rounded transition-colors duration-200';
+        assignBtn.title = 'Assign Assistant';
+        assignBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/></svg>`;
+        assignBtn.addEventListener('click', () => this.openAssignModal(params.data));
+
         // Edit button
         const editBtn = document.createElement('button');
         editBtn.className = 'flex items-center justify-center text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors duration-200';
@@ -193,6 +214,7 @@ export class OrderEntryComponent implements OnInit {
         deleteBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>`;
         deleteBtn.addEventListener('click', () => this.confirmDelete(params.data));
 
+        container.appendChild(assignBtn);
         container.appendChild(editBtn);
         container.appendChild(viewBtn);
         container.appendChild(deleteBtn);
@@ -236,8 +258,9 @@ export class OrderEntryComponent implements OnInit {
     private orderService: OrderService,
     private doctorService: DoctorService,
     private hospitalService: HospitalService,
-    private brandService: BrandService,
+    private itemGroupService: ItemGroupService,
     private itemService: ItemService,
+    private assistantAssignmentService: AssistantAssignmentService,
     private toastService: ToastService,
     private router: Router
   ) {}
@@ -246,8 +269,9 @@ export class OrderEntryComponent implements OnInit {
     this.fetchOrders();
     this.fetchDoctors();
     this.fetchHospitals();
-    this.fetchBrands();
+    this.fetchItemGroups();
     this.fetchAllItems();
+    this.fetchAssistants();
   }
 
   private getCurrentDate(): string {
@@ -268,6 +292,11 @@ export class OrderEntryComponent implements OnInit {
     const year = date.getFullYear();
     
     return `${day}-${month}-${year}`;
+  }
+
+  getItemGroupNames(itemGroupNames: string[]): string {
+    if (!itemGroupNames || itemGroupNames.length === 0) return 'N/A';
+    return itemGroupNames.join(', ');
   }
 
   fetchOrders(): void {
@@ -313,13 +342,13 @@ export class OrderEntryComponent implements OnInit {
     });
   }
 
-  fetchBrands(): void {
-    this.brandService.getAllBrands(true).subscribe({
+  fetchItemGroups(): void {
+    this.itemGroupService.getAllItemGroups('Y').subscribe({
       next: (data) => {
-        this.brands = data;
+        this.itemGroups = data;
       },
       error: (error) => {
-        console.error('Error fetching brands:', error);
+        console.error('Error fetching item groups:', error);
       }
     });
   }
@@ -348,7 +377,6 @@ export class OrderEntryComponent implements OnInit {
   handleCreate(): void {
     this.editingOrder = null;
     this.formData = {
-      orderNo: '',
       orderDate: this.getCurrentDate(),
       doctorId: null,
       hospitalId: null,
@@ -361,14 +389,13 @@ export class OrderEntryComponent implements OnInit {
       createdBy: 'current.user@example.com'
     };
     this.itemsSummary = [];
-    this.selectedBrandIds = [];
+    this.selectedItemGroupIds = [];
     this.isModalOpen = true;
   }
 
   handleEdit(order: Order): void {
     this.editingOrder = order;
     this.formData = {
-      orderNo: order.orderNo,
       orderDate: order.orderDate,
       doctorId: order.doctorId,
       hospitalId: order.hospitalId,
@@ -381,7 +408,7 @@ export class OrderEntryComponent implements OnInit {
       createdBy: order.createdBy || 'current.user@example.com'
     };
     this.itemsSummary = order.items || [];
-    this.selectedBrandIds = (order.itemGroups || []).map(id => parseInt(id)).filter(id => !isNaN(id));
+    this.selectedItemGroupIds = (order.itemGroups || []).map(id => parseInt(id)).filter(id => !isNaN(id));
     this.isModalOpen = true;
   }
 
@@ -435,7 +462,6 @@ export class OrderEntryComponent implements OnInit {
 
   resetForm(): void {
     this.formData = {
-      orderNo: '',
       orderDate: this.getCurrentDate(),
       doctorId: null,
       hospitalId: null,
@@ -448,31 +474,31 @@ export class OrderEntryComponent implements OnInit {
       createdBy: 'current.user@example.com'
     };
     this.itemsSummary = [];
-    this.selectedBrandIds = [];
+    this.selectedItemGroupIds = [];
   }
 
-  onBrandSelectionChange(): void {
-    // Fetch items for all selected brands
-    if (this.selectedBrandIds.length === 0) {
-      // Keep only manual items if no brands selected
+  onItemGroupSelectionChange(): void {
+    // Fetch items for all selected item groups
+    if (this.selectedItemGroupIds.length === 0) {
+      // Keep only manual items if no item groups selected
       const manualRows = this.itemsSummary.filter(i => i.manual);
       this.itemsSummary = [...manualRows];
       this.formData.itemGroups = [];
       return;
     }
 
-    // Fetch items for each selected brand
-    const brandItemRequests = this.selectedBrandIds.map(brandId => 
-      this.itemService.getItemsByBrand(brandId!)
+    // Fetch items for each selected item group
+    const itemGroupRequests = this.selectedItemGroupIds.map(itemGroupId => 
+      this.itemService.getItemsByItemGroup(itemGroupId!)
     );
 
-    forkJoin(brandItemRequests).subscribe({
-      next: (brandsItems: Item[][]) => {
-        // Flatten all items from all brands
+    forkJoin(itemGroupRequests).subscribe({
+      next: (itemGroupsItems: Item[][]) => {
+        // Flatten all items from all item groups
         const allItems: OrderItem[] = [];
         
-        brandsItems.forEach((items, index) => {
-          const brandId = this.selectedBrandIds[index];
+        itemGroupsItems.forEach((items, index) => {
+          const itemGroupId = this.selectedItemGroupIds[index];
           items.forEach(item => {
             allItems.push({
               id: item.itemId?.toString() || item.id?.toString() || '',
@@ -487,10 +513,10 @@ export class OrderEntryComponent implements OnInit {
         const manualRows = this.itemsSummary.filter(i => i.manual);
         
         this.itemsSummary = [...allItems, ...manualRows];
-        this.formData.itemGroups = this.selectedBrandIds.map(id => id?.toString() || '').filter(id => id);
+        this.formData.itemGroups = this.selectedItemGroupIds.map(id => id?.toString() || '').filter(id => id);
       },
       error: (error) => {
-        console.error('Error fetching brand items:', error);
+        console.error('Error fetching item group items:', error);
         // Keep manual items on error
         const manualRows = this.itemsSummary.filter(i => i.manual);
         this.itemsSummary = [...manualRows];
@@ -562,10 +588,26 @@ export class OrderEntryComponent implements OnInit {
     if (this.editingOrder) {
       this.orderService.updateOrder(this.editingOrder.id, orderData).subscribe({
         next: (response) => {
-          if (response.success && response.data) {
+          console.log('Update Order Response:', response);
+          
+          // Handle response - backend might return data directly or wrapped in ApiResponse
+          let updatedOrder: Order | null = null;
+          let isSuccess = false;
+          
+          // Check if response has ApiResponse structure
+          if (response && typeof response === 'object' && 'success' in response) {
+            isSuccess = response.success === true;
+            updatedOrder = response.data || null;
+          } else if (response && typeof response === 'object' && 'id' in response) {
+            // Backend returned order directly without wrapper
+            isSuccess = true;
+            updatedOrder = response as any;
+          }
+          
+          if (isSuccess && updatedOrder) {
             const index = this.orders.findIndex(o => o.id === this.editingOrder!.id);
             if (index !== -1) {
-              this.orders[index] = response.data;
+              this.orders[index] = updatedOrder;
               if (this.gridApi) {
                 this.gridApi.setGridOption('rowData', this.orders);
               }
@@ -573,31 +615,57 @@ export class OrderEntryComponent implements OnInit {
             this.handleCloseModal();
             this.toastService.success('Order updated successfully');
           } else {
-            this.toastService.error(response.message || 'Failed to update order');
+            const errorMsg = (response as any)?.message || 'Failed to update order';
+            console.warn('Update order failed:', { response, isSuccess, updatedOrder });
+            this.toastService.error(errorMsg);
           }
         },
         error: (error) => {
           console.error('Error updating order:', error);
-          this.toastService.error('Failed to update order');
+          this.toastService.error(error.message || 'Failed to update order');
         }
       });
     } else {
       this.orderService.createOrder(orderData).subscribe({
-        next: (response) => {
-          if (response.success && response.data) {
-            this.orders = [response.data, ...this.orders];
+        next: (response: any) => {
+          console.log('Create Order Response:', response);
+          
+          // Handle response - backend might return data directly or wrapped in ApiResponse
+          let orderData: Order | null = null;
+          let isSuccess = false;
+          
+          // Check if response has ApiResponse structure with success field
+          if (response && typeof response === 'object' && 'success' in response) {
+            isSuccess = response.success === true;
+            orderData = response.data || null;
+          } 
+          // Check if response has message and data fields (success pattern)
+          else if (response && typeof response === 'object' && 'data' in response && 'message' in response) {
+            isSuccess = true;
+            orderData = response.data || null;
+          } 
+          // Backend returned order directly without wrapper
+          else if (response && typeof response === 'object' && 'id' in response) {
+            isSuccess = true;
+            orderData = response as any;
+          }
+          
+          if (isSuccess && orderData) {
+            this.orders = [orderData, ...this.orders];
             if (this.gridApi) {
               this.gridApi.setGridOption('rowData', this.orders);
             }
             this.handleCloseModal();
             this.toastService.success('Order created successfully');
           } else {
-            this.toastService.error(response.message || 'Failed to create order');
+            const errorMsg = response?.message || 'Failed to create order';
+            console.warn('Create order failed:', { response, isSuccess, orderData });
+            this.toastService.error(errorMsg);
           }
         },
         error: (error) => {
           console.error('Error creating order:', error);
-          this.toastService.error('Failed to create order');
+          this.toastService.error(error.message || 'Failed to create order');
         }
       });
     }
@@ -652,5 +720,71 @@ export class OrderEntryComponent implements OnInit {
 
   onBreadcrumbNavigate(page: string): void {
     this.router.navigate([`/${page}`]);
+  }
+
+  fetchAssistants(): void {
+    this.assistantAssignmentService.getAssistants().subscribe({
+      next: (data) => {
+        this.assistants = data;
+      },
+      error: (error) => {
+        console.error('Error fetching assistants:', error);
+      }
+    });
+  }
+
+  openAssignModal(order: Order): void {
+    this.assigningOrder = order;
+    this.assignmentData = {
+      assistantId: null,
+      reportingDate: order.operationDate || this.getCurrentDate(),
+      reportingTime: '09:00',
+      notes: ''
+    };
+    this.assignModalOpen = true;
+  }
+
+  closeAssignModal(): void {
+    this.assignModalOpen = false;
+    this.assigningOrder = null;
+    this.assignmentData = {
+      assistantId: null,
+      reportingDate: this.getCurrentDate(),
+      reportingTime: '09:00',
+      notes: ''
+    };
+  }
+
+  handleAssignAssistant(): void {
+    if (!this.assignmentData.assistantId) {
+      this.toastService.warning('Please select an assistant');
+      return;
+    }
+
+    if (!this.assigningOrder) {
+      return;
+    }
+
+    const reportingDateTime = `${this.assignmentData.reportingDate} ${this.assignmentData.reportingTime}`;
+
+    this.assistantAssignmentService.assignAssistant(
+      this.assigningOrder.id,
+      this.assignmentData.assistantId,
+      reportingDateTime,
+      this.assignmentData.notes
+    ).subscribe({
+      next: (response) => {
+        if (response.success) {
+          this.toastService.success(response.message || 'Assistant assigned successfully');
+          this.closeAssignModal();
+        } else {
+          this.toastService.error(response.message || 'Failed to assign assistant');
+        }
+      },
+      error: (error) => {
+        console.error('Error assigning assistant:', error);
+        this.toastService.error('Failed to assign assistant');
+      }
+    });
   }
 }

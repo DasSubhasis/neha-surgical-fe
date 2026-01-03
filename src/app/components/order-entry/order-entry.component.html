@@ -169,17 +169,17 @@
               </div>
             </div>
 
-            <!-- Brands -->
+            <!-- Item Groups (Order Category) -->
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Brands</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Item Groups (Order Category)</label>
               <select 
-                [(ngModel)]="selectedBrandIds"
-                (ngModelChange)="onBrandSelectionChange()"
+                [(ngModel)]="selectedItemGroupIds"
+                (ngModelChange)="onItemGroupSelectionChange()"
                 multiple
                 class="w-full px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
                 style="min-height: 42px;"
               >
-                <option *ngFor="let brand of brands" [value]="brand.brandId">{{ brand.name }}</option>
+                <option *ngFor="let itemGroup of itemGroups" [value]="itemGroup.itemGroupId">{{ itemGroup.name }}</option>
               </select>
             </div>
 
@@ -316,6 +316,10 @@
             <div class="text-sm font-normal text-gray-800">{{ formatDate(viewOrder.materialSendDate) }}</div>
           </div>
           <div class="md:col-span-2">
+            <div class="text-xs font-bold text-indigo-800 mb-1">Item Groups (Order Category)</div>
+            <div class="text-sm font-normal text-gray-800">{{ getItemGroupNames(viewOrder.itemGroups) }}</div>
+          </div>
+          <div class="md:col-span-2">
             <div class="text-xs font-bold text-indigo-800 mb-2">Items Summary</div>
             <div class="border border-gray-200 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow duration-200 max-h-50 overflow-y-auto">
               <table *ngIf="viewOrder.items && viewOrder.items.length > 0" class="w-full text-sm">
@@ -432,6 +436,97 @@
             Delete
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign Assistant Modal -->
+  <div *ngIf="assignModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-30 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-md">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-4 rounded-t-xl flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-white">Assign Assistant</h3>
+        <button (click)="closeAssignModal()" class="text-white hover:text-gray-200">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="p-6 space-y-4">
+        <div *ngIf="assigningOrder" class="bg-indigo-50 border border-indigo-200 rounded-lg p-3 mb-4">
+          <div class="text-xs font-semibold text-indigo-800 mb-1">Order Details</div>
+          <div class="text-sm text-gray-700">
+            <span class="font-medium">{{ assigningOrder.orderNo }}</span> - {{ assigningOrder.doctorName }}
+          </div>
+          <div class="text-xs text-gray-600 mt-1">
+            Operation: {{ formatDate(assigningOrder.operationDate) }} {{ assigningOrder.operationTime }}
+          </div>
+        </div>
+
+        <!-- Assistant Selection -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Assistant <span class="text-red-500">*</span>
+          </label>
+          <app-searchable-dropdown
+            [(ngModel)]="assignmentData.assistantId"
+            [options]="assistants"
+            [idKey]="'id'"
+            [nameKey]="'name'"
+            [placeholder]="'Search and select assistant'"
+            [required]="true"
+          ></app-searchable-dropdown>
+        </div>
+
+        <!-- Reporting Date and Time -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Reporting Date</label>
+            <input 
+              type="date" 
+              [(ngModel)]="assignmentData.reportingDate"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Reporting Time</label>
+            <input 
+              type="time" 
+              [(ngModel)]="assignmentData.reportingTime"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200"
+            />
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
+          <textarea 
+            [(ngModel)]="assignmentData.notes"
+            rows="3"
+            maxlength="500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 transition-all duration-200 resize-none"
+            placeholder="Add any special instructions or notes..."
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end space-x-3">
+        <button 
+          (click)="closeAssignModal()" 
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button 
+          (click)="handleAssignAssistant()" 
+          class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors duration-200"
+        >
+          Assign
+        </button>
       </div>
     </div>
   </div>

@@ -198,10 +198,9 @@ export class RoleComponent implements OnInit {
     this.hasError = false;
     this.errorMessage = '';
     
-    this.roleService.getAllRoles(true).subscribe({
-      next: (response) => {
-        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
-        this.roles = data.map((role: any) => ({
+    this.roleService.getAllRoles('Y').subscribe({
+      next: (roles) => {
+        this.roles = roles.map((role: any) => ({
           id: role.roleId || role.id,
           name: role.name,
           description: role.description,

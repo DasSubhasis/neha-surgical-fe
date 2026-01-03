@@ -50,6 +50,10 @@ export const routes: Routes = [
         loadComponent: () => import('./components/category/category.component').then(m => m.CategoryComponent)
       },
       {
+        path: 'item-group',
+        loadComponent: () => import('./components/item-group/item-group.component').then(m => m.ItemGroupComponent)
+      },
+      {
         path: 'role',
         loadComponent: () => import('./components/role/role.component').then(m => m.RoleComponent)
       },

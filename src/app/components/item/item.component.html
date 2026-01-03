@@ -137,6 +137,19 @@
               [required]="true"
             ></app-searchable-dropdown>
           </div>
+
+          <!-- Item Group Type -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Item Group Type</label>
+            <app-searchable-dropdown
+              [(ngModel)]="formData.itemGroupId"
+              [options]="itemGroupOptions"
+              [idKey]="'itemGroupId'"
+              [nameKey]="'name'"
+              [placeholder]="'Select item group type'"
+              [required]="false"
+            ></app-searchable-dropdown>
+          </div>
           
           <!-- Specification -->
           <div>
@@ -296,6 +309,10 @@
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Category</div>
               <div class="text-sm font-normal text-gray-800">{{ viewItem.categoryName }}</div>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-indigo-800 mb-1">Item Group Type</div>
+              <div class="text-sm font-normal text-gray-800">{{ viewItem.itemGroupName || '-' }}</div>
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Specification</div>

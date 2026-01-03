@@ -72,6 +72,7 @@ export class SidebarComponent implements OnInit {
         { key: 'specification', label: 'Specification', icon: 'list' },
         { key: 'size', label: 'Size', icon: 'ruler' },
         { key: 'category', label: 'Category', icon: 'folder' },
+        { key: 'item-group', label: 'Item Group', icon: 'layer-group' },
         { key: 'user', label: 'User', icon: 'users' },
         { key: 'role', label: 'Role', icon: 'shield' },
         { key: 'menu', label: 'Menu', icon: 'bars' }
