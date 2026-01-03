@@ -48,7 +48,6 @@ export class UserComponent implements OnInit {
 
   // Form data
   formData: UserFormData = {
-    username: '',
     email: '',
     fullName: '',
     phone: '',
@@ -70,7 +69,6 @@ export class UserComponent implements OnInit {
 
   // AG Grid column definitions
   columnDefs: ColDef[] = [
-    { headerName: 'Username', field: 'username', sortable: true, filter: 'agTextColumnFilter', width: 130, minWidth: 120 },
     { headerName: 'Full Name', field: 'fullName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
     { headerName: 'Email', field: 'email', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 200 },
     { headerName: 'Phone', field: 'phone', sortable: true, filter: 'agTextColumnFilter', width: 120, minWidth: 120 },
@@ -215,17 +213,16 @@ export class UserComponent implements OnInit {
     this.hasError = false;
     this.errorMessage = '';
     
-    this.userService.getAllUsers(true).subscribe({
-      next: (response) => {
-        const data = Array.isArray(response) ? response : (response as any)?.data || (response as any)?.result || (response as any)?.items || [];
-        this.users = data.map((user: any) => ({
+    this.userService.getAllUsers('Y').subscribe({
+      next: (users) => {
+        this.users = users.map((user: any) => ({
           id: user.userId || user.id,
-          username: user.username,
+          username: user.username || user.email.split('@')[0],
           email: user.email,
           fullName: user.fullName,
           phone: user.phone,
           roleId: user.roleId,
-          roleName: this.getRoleName(user.roleId),
+          roleName: user.roleName || 'N/A',
           status: user.isActive === 'Y' ? 'Active' : 'Inactive',
           isActive: user.isActive,
           createdAt: user.createdAt,
@@ -258,9 +255,8 @@ export class UserComponent implements OnInit {
   }
 
   handleExportExcel(): void {
-    const headers = ['Username', 'Full Name', 'Email', 'Phone', 'Role', 'Status', 'Created At', 'Last Login'];
+    const headers = ['Full Name', 'Email', 'Phone', 'Role', 'Status', 'Created At', 'Last Login'];
     const rows = this.users.map(u => [
-      u.username,
       u.fullName,
       u.email,
       u.phone,
@@ -291,7 +287,6 @@ export class UserComponent implements OnInit {
   openCreateUser(): void {
     this.editingUser = null;
     this.formData = {
-      username: '',
       email: '',
       fullName: '',
       phone: '',
@@ -306,7 +301,6 @@ export class UserComponent implements OnInit {
   openEditUser(user: User): void {
     this.editingUser = user;
     this.formData = {
-      username: user.username || '',
       email: user.email || '',
       fullName: user.fullName || '',
       phone: user.phone || '',
@@ -322,7 +316,6 @@ export class UserComponent implements OnInit {
     this.isModalOpen = false;
     this.editingUser = null;
     this.formData = {
-      username: '',
       email: '',
       fullName: '',
       phone: '',
@@ -365,21 +358,19 @@ export class UserComponent implements OnInit {
   }
 
   onFormChange(): void {
-    if (!this.formData.username && !this.formData.email) {
+    if (!this.formData.email) {
       this.inlineMatches = [];
       return;
     }
 
     this.inlineMatches = this.users.filter(u => {
-      const matchUsername = this.formData.username && u.username.toLowerCase().includes(this.formData.username.trim().toLowerCase());
       const matchEmail = this.formData.email && u.email.toLowerCase().includes(this.formData.email.trim().toLowerCase());
-      return matchUsername || matchEmail;
+      return matchEmail;
     }).slice(0, 5);
   }
 
   isSaveDisabled(): boolean {
-    const basicValid = !!(this.formData.username?.trim() && 
-                         this.formData.email?.trim() && 
+    const basicValid = !!(this.formData.email?.trim() && 
                          this.formData.fullName?.trim() &&
                          this.formData.roleId > 0);
     
@@ -392,19 +383,6 @@ export class UserComponent implements OnInit {
     if (this.formData.phone && !this.phonePattern.test(this.formData.phone)) return true;
 
     return false;
-  }
-
-  checkDuplicateUsername(username: string, excludeId: number | null = null): User | null {
-    if (!username) return null;
-    
-    const lowerUsername = username.trim().toLowerCase();
-    
-    const found = this.users.find(u => {
-      if (excludeId && u.id === excludeId) return false;
-      return u.username && u.username.trim().toLowerCase() === lowerUsername;
-    });
-    
-    return found || null;
   }
 
   checkDuplicateEmail(email: string, excludeId: number | null = null): User | null {
@@ -421,10 +399,6 @@ export class UserComponent implements OnInit {
   }
 
   handleSaveUser(): void {
-    if (!this.formData.username?.trim()) {
-      console.error('Username is mandatory');
-      return;
-    }
     if (!this.formData.email?.trim()) {
       console.error('Email is mandatory');
       return;
@@ -435,17 +409,6 @@ export class UserComponent implements OnInit {
     }
     if (!this.formData.roleId) {
       console.error('Role is mandatory');
-      return;
-    }
-
-    const dupUsername = this.checkDuplicateUsername(
-      this.formData.username, 
-      this.editingUser?.id || null
-    );
-
-    if (dupUsername) {
-      console.error('Username already exists:', dupUsername);
-      this.viewUser = dupUsername;
       return;
     }
 
@@ -479,7 +442,6 @@ export class UserComponent implements OnInit {
           if (index > -1) {
             this.users[index] = {
               ...this.users[index],
-              username: this.formData.username,
               email: this.formData.email,
               fullName: this.formData.fullName,
               phone: this.formData.phone,
@@ -506,7 +468,7 @@ export class UserComponent implements OnInit {
           const newId = this.users.length ? Math.max(...this.users.map(u => u.id || 0)) + 1 : 1;
           const newUser: User = {
             id: newId,
-            username: this.formData.username,
+            username: this.formData.email.split('@')[0],
             email: this.formData.email,
             fullName: this.formData.fullName,
             phone: this.formData.phone,
@@ -585,16 +547,13 @@ export class UserComponent implements OnInit {
     });
 
     const afterDup = mapped.map(item => {
-      const username = item.row.username;
       const email = item.row.email;
-      const lowerUsername = username ? username.trim().toLowerCase() : null;
       const lowerEmail = email ? email.trim().toLowerCase() : null;
       
       const dupAgainst: (number | string)[] = this.users
         .filter(u => {
-          const matchUser = lowerUsername && u.username && u.username.trim().toLowerCase() === lowerUsername;
           const matchEmail = lowerEmail && u.email && u.email.trim().toLowerCase() === lowerEmail;
-          return matchUser || matchEmail;
+          return matchEmail;
         })
         .map(u => u.id!);
       return { ...item, isDuplicate: dupAgainst.length > 0, duplicateAgainst: dupAgainst };
@@ -603,9 +562,8 @@ export class UserComponent implements OnInit {
     for (let i = 0; i < afterDup.length; i++) {
       for (let j = i + 1; j < afterDup.length; j++) {
         const a = afterDup[i].row, b = afterDup[j].row;
-        const sameUsername = a.username && b.username && a.username.trim().toLowerCase() === b.username.trim().toLowerCase();
         const sameEmail = a.email && b.email && a.email.trim().toLowerCase() === b.email.trim().toLowerCase();
-        if (sameUsername || sameEmail) {
+        if (sameEmail) {
           afterDup[i].isDuplicate = true;
           afterDup[j].isDuplicate = true;
           afterDup[i].duplicateAgainst.push(`file-${afterDup[j].index}`);
@@ -641,7 +599,6 @@ export class UserComponent implements OnInit {
         if (idx > -1) {
           newUsers[idx] = { 
             ...newUsers[idx], 
-            username: item.row.username || newUsers[idx].username,
             email: item.row.email || newUsers[idx].email,
             fullName: item.row.fullName || newUsers[idx].fullName,
             phone: item.row.phone || newUsers[idx].phone
@@ -654,16 +611,15 @@ export class UserComponent implements OnInit {
     let added = 0, merged = toMerge.length, skipped = 0;
     
     toAdd.forEach(item => {
-      const dupUser = this.checkDuplicateUsername(item.row.username);
       const dupEmail = this.checkDuplicateEmail(item.row.email);
-      if (dupUser || dupEmail) { skipped++; return; }
+      if (dupEmail) { skipped++; return; }
       
       // Try to find role by name
       const role = this.roles.find(r => r.name.toLowerCase() === item.row.roleName.toLowerCase());
       
       newUsers.unshift({
         id: nextId++,
-        username: item.row.username,
+        username: item.row.email.split('@')[0],
         email: item.row.email,
         fullName: item.row.fullName,
         phone: item.row.phone,

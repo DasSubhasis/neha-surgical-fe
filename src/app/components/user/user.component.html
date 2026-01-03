@@ -92,18 +92,18 @@
 
     <!-- Modal Body -->
     <div class="px-6 py-4 space-y-4 overflow-y-auto flex-1">
-      <!-- Username and Status -->
+      <!-- Email and Status -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
         <div class="md:col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Username <span class="text-red-500">*</span>
+            Email <span class="text-red-500">*</span>
           </label>
           <input 
-            type="text" 
-            [(ngModel)]="formData.username"
+            type="email" 
+            [(ngModel)]="formData.email"
             (ngModelChange)="onFormChange()"
             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200" 
-            placeholder="Enter username" 
+            placeholder="Enter email address" 
           />
         </div>
 
@@ -130,7 +130,7 @@
         </div>
       </div>
 
-      <!-- Full Name and Email -->
+      <!-- Full Name and Phone -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -145,7 +145,7 @@
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Email <span class="text-red-500">*</span>
+            Phone
           </label>
           <input 
             type="email" 
@@ -193,7 +193,7 @@
       <div *ngIf="inlineMatches.length > 0" class="bg-yellow-50 border border-yellow-200 p-3 rounded">
         <div class="font-semibold text-sm">Possible matches found:</div>
         <ul class="mt-2 text-sm">
-          <li *ngFor="let match of inlineMatches">{{ match.username }} — {{ match.email }} ({{ match.roleName }})</li>
+          <li *ngFor="let match of inlineMatches">{{ match.email }} — {{ match.fullName }} ({{ match.roleName }})</li>
         </ul>
       </div>
     </div>
@@ -236,16 +236,12 @@
     <div class="px-6 py-4 space-y-4 overflow-y-auto flex-1">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <div class="text-xs font-bold text-indigo-800">Username</div>
-          <div class="text-sm">{{ viewUser.username || '—' }}</div>
+          <div class="text-xs font-bold text-indigo-800">Email</div>
+          <div class="text-sm">{{ viewUser.email || '—' }}</div>
         </div>
         <div>
           <div class="text-xs font-bold text-indigo-800">Full Name</div>
           <div class="text-sm">{{ viewUser.fullName || '—' }}</div>
-        </div>
-        <div>
-          <div class="text-xs font-bold text-indigo-800">Email</div>
-          <div class="text-sm">{{ viewUser.email || '—' }}</div>
         </div>
         <div>
           <div class="text-xs font-bold text-indigo-800">Phone</div>
@@ -299,7 +295,7 @@
       </div>
       <h3 class="text-lg font-semibold text-gray-900 mb-2">Delete User?</h3>
       <p class="text-sm text-gray-600 mb-6">
-        Delete <span class="font-semibold">{{ userToDelete?.fullName }}</span> ({{ userToDelete?.username }})? This can't be undone.
+        Delete <span class="font-semibold">{{ userToDelete?.fullName }}</span> ({{ userToDelete?.email }})? This can't be undone.
       </p>
       <div class="flex justify-center gap-3">
         <button
@@ -349,11 +345,11 @@
             <div>
               <div class="font-semibold">
                 Row {{ item.index }}: 
-                <span *ngIf="item.row.username">{{ item.row.username }}</span>
-                <em *ngIf="!item.row.username" class="text-gray-400">(missing username)</em>
+                <span *ngIf="item.row.email">{{ item.row.email }}</span>
+                <em *ngIf="!item.row.email" class="text-gray-400">(missing email)</em>
               </div>
               <div class="text-sm text-gray-600">
-                {{ item.row.fullName }} | {{ item.row.email }} | Role: {{ item.row.roleName || 'N/A' }}
+                {{ item.row.fullName }} | {{ item.row.phone }} | Role: {{ item.row.roleName || 'N/A' }}
               </div>
               <div *ngIf="item.duplicateAgainst.length > 0" class="text-xs text-red-700 mt-1">
                 Duplicates: {{ item.duplicateAgainst.join(', ') }}

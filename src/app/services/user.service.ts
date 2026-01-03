@@ -1,12 +1,13 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService, ApiResponse } from './api.service';
 import { Role } from './role.service';
 
 export interface User {
   id?: number;
   userId?: number;
-  username: string;
+  username?: string;
   email: string;
   fullName: string;
   phone: string;
@@ -20,7 +21,6 @@ export interface User {
 }
 
 export interface UserFormData {
-  username: string;
   email: string;
   fullName: string;
   phone: string;
@@ -32,7 +32,6 @@ export interface UserFormData {
 export interface ImportRow {
   index: number;
   row: {
-    username: string;
     email: string;
     fullName: string;
     phone: string;
@@ -53,31 +52,45 @@ export class UserService {
   /**
    * Get all users
    */
-  getAllUsers(isActive: boolean = true): Observable<User[]> {
-    const endpoint = `/Users${isActive !== undefined ? `?isActive=${isActive}` : ''}`;
-    return this.apiService.get<User[]>(endpoint);
+  getAllUsers(isActive?: string, roleId?: number): Observable<User[]> {
+    let endpoint = '/Users';
+    const params: string[] = [];
+    
+    if (isActive) params.push(`isActive=${isActive}`);
+    if (roleId) params.push(`roleId=${roleId}`);
+    
+    if (params.length > 0) {
+      endpoint += `?${params.join('&')}`;
+    }
+    
+    return this.apiService.get<ApiResponse<User[]>>(endpoint).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**
    * Get a single user by ID
    */
   getUserById(id: number): Observable<User> {
-    return this.apiService.get<User>(`/Users/${id}`);
+    return this.apiService.get<ApiResponse<User>>(`/Users/${id}`).pipe(
+      map(response => response.data!)
+    );
   }
 
   /**
    * Get users by role ID
    */
   getUsersByRole(roleId: number): Observable<User[]> {
-    return this.apiService.get<User[]>(`/Users?roleId=${roleId}`);
+    return this.apiService.get<ApiResponse<User[]>>(`/Users/role/${roleId}`).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**
    * Create a new user
    */
-  createUser(userData: UserFormData): Observable<ApiResponse> {
+  createUser(userData: UserFormData): Observable<ApiResponse<User>> {
     const payload = {
-      username: userData.username,
       email: userData.email,
       fullName: userData.fullName,
       phone: userData.phone || '',
@@ -85,15 +98,14 @@ export class UserService {
       isActive: userData.isActive || 'Y'
     };
 
-    return this.apiService.post<ApiResponse>('/Users', payload);
+    return this.apiService.post<ApiResponse<User>>('/Users', payload);
   }
 
   /**
    * Update an existing user
    */
-  updateUser(id: number, userData: UserFormData): Observable<ApiResponse> {
-    const payload: any = {
-      username: userData.username,
+  updateUser(id: number, userData: UserFormData): Observable<ApiResponse<User>> {
+    const payload = {
       email: userData.email,
       fullName: userData.fullName,
       phone: userData.phone || '',
@@ -101,7 +113,7 @@ export class UserService {
       isActive: userData.isActive || 'Y'
     };
 
-    return this.apiService.put<ApiResponse>(`/Users/${id}`, payload);
+    return this.apiService.put<ApiResponse<User>>(`/Users/${id}`, payload);
   }
 
   /**
