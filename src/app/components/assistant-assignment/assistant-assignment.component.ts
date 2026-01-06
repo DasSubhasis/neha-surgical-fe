@@ -1,4 +1,4 @@
-import { Component, OnInit, EventEmitter, Output } from '@angular/core';
+import { Component, OnInit, EventEmitter, Output, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -46,13 +46,14 @@ export class AssistantAssignmentComponent implements OnInit {
   hasError: boolean = false;
 
   // Modal states
-  isAssignModalOpen: boolean = false;
   viewRow: AssistantAssignment | null = null;
+  viewRowLoading: boolean = false;
   isPendingOrdersModalOpen: boolean = false;
 
   // Pending orders for assignment
   pendingOrders: Order[] = [];
   viewPendingOrder: Order | null = null;
+  viewPendingOrderLoading: boolean = false;
   private pendingGridApi!: GridApi;
 
   // Assignment modal states
@@ -69,16 +70,6 @@ export class AssistantAssignmentComponent implements OnInit {
     reportingTime: '09:00',
     notes: ''
   };
-
-  // Assignment form data
-  selectedOrder: AssistantAssignment | null = null;
-  selectedAssistant: number | null = null;
-  reportingTime: string = '';
-  remarks: string = '';
-  overrideConfirmed: boolean = false;
-
-  // Computed schedule for selected assistant
-  assistantSchedule: ExistingAssignment[] = [];
 
   // AG Grid column definitions
   columnDefs: ColDef[] = [
@@ -133,20 +124,10 @@ export class AssistantAssignmentComponent implements OnInit {
         viewBtn.title = 'View';
         viewBtn.innerHTML = `<svg class="w-4 h-4" fill="#52a447" viewBox="0 0 640 640"><path d="M320 96C239.2 96 174.5 132.8 127.4 176.6C80.6 220.1 49.3 272 34.4 307.7C31.1 315.6 31.1 324.4 34.4 332.3C49.3 368 80.6 420 127.4 463.4C174.5 507.1 239.2 544 320 544C400.8 544 465.5 507.2 512.6 463.4C559.4 419.9 590.7 368 605.6 332.3C608.9 324.4 608.9 315.6 605.6 307.7C590.7 272 559.4 220 512.6 176.6C465.5 132.9 400.8 96 320 96zM176 320C176 240.5 240.5 176 320 176C399.5 176 464 240.5 464 320C464 399.5 399.5 464 320 464C240.5 464 176 399.5 176 320zM320 256C320 291.3 291.3 320 256 320C244.5 320 233.7 317 224.3 311.6C223.3 322.5 224.2 333.7 227.2 344.8C240.9 396 293.6 426.4 344.8 412.7C396 399 426.4 346.3 412.7 295.1C400.5 249.4 357.2 220.3 311.6 224.3C316.9 233.6 320 244.4 320 256z" /></svg>`;
         viewBtn.addEventListener('click', () => {
-          this.viewRow = params.data;
-        });
-
-        // Assign button
-        const assignBtn = document.createElement('button');
-        assignBtn.className = 'text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded transition-colors duration-200';
-        assignBtn.title = 'Assign Assistant';
-        assignBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="#52a447" viewBox="0 0 640 640"><path d="M128 64C92.7 64 64 92.7 64 128L64 512C64 547.3 92.7 576 128 576L308 576C297.5 561.4 289 545.3 282.9 528L208 528L208 448C208 430.3 222.3 416 240 416L272 416C274 416 276 416.2 277.9 416.5C283.9 392.9 294.2 371.1 308 352L304 352C295.2 352 288 344.8 288 336L288 304C288 295.2 295.2 288 304 288L336 288C344.8 288 352 295.2 352 304L352 308C379.5 288.2 412.3 275.6 448 272.6L448 128C448 92.7 419.3 64 384 64L128 64zM160 176C160 167.2 167.2 160 176 160L208 160C216.8 160 224 167.2 224 176L224 208C224 216.8 216.8 224 208 224L176 224C167.2 224 160 216.8 160 208L160 176zM304 160L336 160C344.8 160 352 167.2 352 176L352 208C352 216.8 344.8 224 336 224L304 224C295.2 224 288 216.8 288 208L288 176C288 167.2 295.2 160 304 160zM160 304C160 295.2 167.2 288 176 288L208 288C216.8 288 224 295.2 224 304L224 336C224 344.8 216.8 352 208 352L176 352C167.2 352 160 344.8 160 336L160 304zM608 464C608 384.5 543.5 320 464 320C384.5 320 320 384.5 320 464C320 543.5 384.5 608 464 608C543.5 608 608 543.5 608 464zM521.4 403.1C528.5 408.3 530.1 418.3 524.9 425.4L460.9 513.4C458.1 517.2 453.9 519.6 449.2 519.9C444.5 520.2 439.9 518.6 436.6 515.3L396.6 475.3C390.4 469.1 390.4 458.9 396.6 452.7C402.8 446.5 413 446.5 419.2 452.7L446 479.5L499 406.6C504.2 399.5 514.2 397.9 521.4 403.1z"/></svg>`;
-        assignBtn.addEventListener('click', () => {
-          this.openAssignModal(params.data);
+          this.viewOrderDetails(params.data.id);
         });
 
         container.appendChild(viewBtn);
-        container.appendChild(assignBtn);
         
         return container;
       }
@@ -203,6 +184,7 @@ export class AssistantAssignmentComponent implements OnInit {
   actionItems: ActionItem[][] = [];
 
   constructor(
+    private cdr: ChangeDetectorRef,
     private assistantAssignmentService: AssistantAssignmentService,
     private orderService: OrderService,
     private toastService: ToastService,
@@ -242,9 +224,11 @@ export class AssistantAssignmentComponent implements OnInit {
     this.loading = true;
     this.hasError = false;
 
-    this.assistantAssignmentService.getAssignments().subscribe({
+    // Fetch only assigned orders for the main grid
+    this.assistantAssignmentService.getAssignments('Assigned').subscribe({
       next: (data) => {
-        this.assignments = data;
+        // Filter to ensure we only show assigned orders
+        this.assignments = data.filter(assignment => assignment.status === 'Assigned');
         this.loading = false;
         if (this.gridReady && this.gridApi) {
           this.gridApi.setGridOption('rowData', this.assignments);
@@ -281,9 +265,28 @@ export class AssistantAssignmentComponent implements OnInit {
   }
 
   fetchPendingOrders(): void {
-    this.orderService.getOrders().subscribe({
+    // Fetch only pending orders for the modal grid
+    this.assistantAssignmentService.getAssignments('Pending').subscribe({
       next: (data) => {
-        this.pendingOrders = data.filter(order => order.status === 'Pending');
+        // Filter to ensure we only show pending (unassigned) orders
+        this.pendingOrders = data.filter(order => order.status === 'Pending').map(assignment => ({
+          id: assignment.id,
+          orderNo: assignment.orderNo,
+          orderDate: assignment.operationDate,
+          doctorId: assignment.doctorId || 0,
+          doctorName: assignment.doctorName || '',
+          hospitalId: assignment.hospitalId || 0,
+          hospitalName: assignment.hospitalName || '',
+          operationDate: assignment.operationDate,
+          operationTime: assignment.operationTime,
+          materialSendDate: '',
+          status: assignment.status,
+          remarks: assignment.remarks,
+          itemGroups: assignment.itemGroups || [],
+          items: assignment.items || [],
+          createdBy: '',
+          audits: []
+        }));
       },
       error: (error) => {
         console.error('Error fetching pending orders:', error);
@@ -293,7 +296,52 @@ export class AssistantAssignmentComponent implements OnInit {
   }
 
   viewPendingOrderDetails(order: Order): void {
-    this.viewPendingOrder = order;
+    // Show loading state
+    this.viewPendingOrderLoading = true;
+    
+    // Fetch full order details immediately, don't show modal yet
+    this.orderService.getOrder(order.id).subscribe({
+      next: (fullOrder: Order) => {
+        this.viewPendingOrder = fullOrder;
+        this.viewPendingOrderLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error: any) => {
+        console.error('Error fetching order details:', error);
+        this.toastService.error('Failed to load order details');
+        this.viewPendingOrderLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  viewOrderDetails(orderId: number): void {
+    // Find the assignment data first
+    const assignment = this.assignments.find(a => a.id === orderId);
+    if (!assignment) return;
+
+    // Show loading state
+    this.viewRowLoading = true;
+    
+    // Fetch full order details immediately, don't show modal yet
+    this.orderService.getOrder(orderId).subscribe({
+      next: (order: Order) => {
+        // Merge assignment data with order data and show modal
+        this.viewRow = {
+          ...assignment,
+          itemGroups: order.itemGroups,
+          items: order.items
+        };
+        this.viewRowLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: (error: any) => {
+        console.error('Error fetching order details:', error);
+        this.toastService.error('Failed to load order details');
+        this.viewRowLoading = false;
+        this.cdr.detectChanges();
+      }
+    });
   }
 
   onPendingGridReady(params: GridReadyEvent): void {
@@ -309,148 +357,6 @@ export class AssistantAssignmentComponent implements OnInit {
 
   onBreadcrumbNavigate(page: string): void {
     this.router.navigate([`/${page}`]);
-  }
-
-  openAssignModal(order: AssistantAssignment): void {
-    this.selectedOrder = order;
-    this.selectedAssistant = order.assistantId || null;
-    this.reportingTime = order.reportingTime || order.operationTime;
-    this.remarks = order.remarks || '';
-    this.overrideConfirmed = false;
-    this.isAssignModalOpen = true;
-    this.updateAssistantSchedule();
-  }
-
-  closeAssignModal(): void {
-    this.isAssignModalOpen = false;
-    this.selectedOrder = null;
-    this.selectedAssistant = null;
-    this.reportingTime = '';
-    this.remarks = '';
-    this.overrideConfirmed = false;
-    this.assistantSchedule = [];
-  }
-
-  onAssistantChange(): void {
-    this.updateAssistantSchedule();
-  }
-
-  updateAssistantSchedule(): void {
-    if (this.selectedAssistant && this.selectedOrder) {
-      // Fetch existing assignments for the selected assistant
-      this.assistantAssignmentService.getExistingAssignments(this.selectedAssistant).subscribe({
-        next: (data) => {
-          this.existingAssignments = data;
-          this.assistantSchedule = this.getSchedule(this.selectedAssistant!, this.selectedOrder!.operationDate);
-        },
-        error: (error) => {
-          console.error('Error fetching existing assignments:', error);
-          this.assistantSchedule = [];
-        }
-      });
-    } else {
-      this.assistantSchedule = [];
-    }
-  }
-
-  getSchedule(assistantId: number, date: string): ExistingAssignment[] {
-    return this.existingAssignments.filter(
-      x => x.assistantId === assistantId && x.operationDate === date
-    );
-  }
-
-  parseTime(t: string | null): number {
-    if (!t) return 0;
-    const [hh, mm] = t.split(':').map(Number);
-    return (Number.isFinite(hh) ? hh : 0) * 60 + (Number.isFinite(mm) ? mm : 0);
-  }
-
-  checkConflicts(assistantId: number, date: string, time: string): ExistingAssignment[] {
-    const sched = this.getSchedule(assistantId, date);
-    const t = this.parseTime(time);
-    
-    return sched.filter(s => {
-      const start = this.parseTime(s.reportingTime);
-      const end = this.parseTime(s.operationTime);
-      const overlap = t >= start && t <= end;
-      const travel = t >= start - 60 && t <= end + 60;
-      return overlap || travel;
-    });
-  }
-
-  handleAssign(): void {
-    if (!this.selectedOrder) {
-      alert('No order selected');
-      return;
-    }
-    
-    if (!this.selectedAssistant) {
-      alert('Select Assistant');
-      return;
-    }
-    
-    if (!this.reportingTime) {
-      alert('Reporting time required');
-      return;
-    }
-
-    // Validate reporting time is before operation time
-    const opStart = this.parseTime(this.selectedOrder.operationTime);
-    const rep = this.parseTime(this.reportingTime);
-    
-    if (rep > opStart) {
-      alert('Reporting time must be before operation start time');
-      return;
-    }
-
-    // Check conflicts
-    const conflicts = this.checkConflicts(
-      this.selectedAssistant,
-      this.selectedOrder.operationDate,
-      this.reportingTime
-    );
-
-    if (conflicts.length && !this.overrideConfirmed) {
-      const confirmed = confirm(
-        `Conflict Detected\n\nAssistant has ${conflicts.length} conflict(s) on ${this.selectedOrder.operationDate}. Click OK to Override and force assign.`
-      );
-
-      if (confirmed) {
-        this.overrideConfirmed = true;
-        this.handleAssign(); // Retry with override
-      }
-      return;
-    }
-
-    // Perform assignment
-    this.assistantAssignmentService.assignAssistant(
-      this.selectedOrder.id,
-      this.selectedAssistant!,
-      this.selectedOrder.operationDate,
-      this.reportingTime,
-      this.remarks,
-      0 // assignedBy - can be updated to use current logged-in user ID
-    ).subscribe({
-      next: (response) => {
-        if (response.success && response.data) {
-          const index = this.assignments.findIndex(a => a.id === this.selectedOrder!.id);
-          if (index !== -1) {
-            this.assignments[index] = response.data;
-            if (this.gridApi) {
-              this.gridApi.setGridOption('rowData', this.assignments);
-            }
-          }
-          alert('Assistant Assigned');
-          this.closeAssignModal();
-        } else {
-          alert(response.message || 'Failed to assign assistant');
-        }
-      },
-      error: (error) => {
-        console.error('Error assigning assistant:', error);
-        alert('Failed to assign assistant');
-      }
-    });
   }
 
   // Assignment modal methods for pending orders
@@ -476,6 +382,8 @@ export class AssistantAssignmentComponent implements OnInit {
       reportingTime: '09:00',
       notes: ''
     };
+    // Reopen the pending orders modal
+    this.openPendingOrdersModal();
   }
 
   onAssistantChangeFromGrid(): void {
