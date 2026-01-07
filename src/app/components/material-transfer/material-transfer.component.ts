@@ -622,7 +622,7 @@ export class MaterialTransferComponent implements OnInit {
       deliveryDate: this.assignForm.deliveryDate,
       deliveredBy: deliveredByDisplay,
       remarks: this.assignForm.remarks || '',
-      deliveryStatus: 'Delivered',
+      deliveryStatus: 'Assigned',
       createdBy: 'current-user' // TODO: Get from auth service
     };
     
