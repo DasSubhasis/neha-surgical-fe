@@ -30,6 +30,14 @@ import { forkJoin } from 'rxjs';
     :host ::ng-deep .ag-center-aligned-header .ag-header-cell-label {
       justify-content: center !important;
     }
+    :host ::ng-deep .ag-overlay-no-rows-center {
+      padding: 50px;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    :host ::ng-deep .ag-root-wrapper {
+      min-height: 400px;
+    }
   `]
 })
 export class OrderEntryComponent implements OnInit {

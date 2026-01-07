@@ -59,6 +59,7 @@
       [rowSelection]="'multiple'"
       [animateRows]="true"
       [suppressMenuHide]="true"
+      overlayNoRowsTemplate="<span class='ag-overlay-no-rows-center'>No records found</span>"
       (gridReady)="onGridReady($event)"
     ></ag-grid-angular>
   </div>
@@ -128,7 +129,7 @@
                 />
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Material Send Date</label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Material to be Sent</label>
                 <input 
                   type="date" 
                   [(ngModel)]="formData.materialSendDate"
@@ -312,7 +313,7 @@
             <div class="text-sm font-normal text-gray-800">{{ formatDate(viewOrder.operationDate) }} {{ viewOrder.operationTime }}</div>
           </div>
           <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Material Send Date</div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Material to be Sent</div>
             <div class="text-sm font-normal text-gray-800">{{ formatDate(viewOrder.materialSendDate) }}</div>
           </div>
           <div class="md:col-span-2">

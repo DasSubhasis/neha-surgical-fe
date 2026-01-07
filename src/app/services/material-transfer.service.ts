@@ -1,0 +1,235 @@
+import { Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { ApiService, ApiResponse } from './api.service';
+import { ENDPOINTS } from '../config/api.config';
+
+export interface MaterialTransfer {
+  id: number;
+  orderNo: string;
+  orderDate: string;
+  doctorName: string;
+  hospitalName: string;
+  operationDate: string;
+  operationTime?: string;
+  materialSendDate: string;
+  deliveryDate?: string;
+  itemsSummary: MaterialTransferItem[];
+  status: string;
+  remarks?: string;
+  deliveryRemarks?: string;
+  proofUrl?: string;
+  audits: MaterialTransferAudit[];
+}
+
+export interface MaterialTransferItem {
+  id: string;
+  name: string;
+  manual?: boolean;
+  isGroup?: boolean;
+}
+
+export interface MaterialTransferAudit {
+  when: string;
+  by: string;
+  action: string;
+}
+
+export interface MaterialTransferFormData {
+  orderId: number;
+  deliveryDate: string;
+  remarks?: string;
+  proofFile?: File;
+}
+
+export interface MaterialDeliveryFormData {
+  orderId: number;
+  deliveryDate: string;
+  deliveredBy: string;
+  remarks: string;
+  deliveryStatus: string;
+  createdBy: string;
+}
+
+export interface MaterialDelivery {
+  deliveryId: number;
+  orderId: number;
+  orderNo: string;
+  doctorName: string;
+  hospitalName: string;
+  operationDate: string;
+  operationTime?: string;
+  materialSendDate?: string;
+  deliveryDate: string;
+  deliveredBy: string;
+  remarks: string;
+  deliveryStatus: string;
+  createdBy: string;
+  updatedBy: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+@Injectable({
+  providedIn: 'root'
+})
+export class MaterialTransferService {
+  constructor(private apiService: ApiService) {}
+
+  /**
+   * Get all material transfers (orders with Booked or Material Delivered status)
+   */
+  getTransfers(): Observable<MaterialTransfer[]> {
+    return this.apiService.get<ApiResponse<MaterialTransfer[]>>(ENDPOINTS.ORDERS.LIST).pipe(
+      map(response => {
+        const orders = response.data || [];
+        // Filter only orders that are Booked or Material Delivered
+        return orders.filter(order => 
+          order.status === 'Booked' || order.status === 'Material Delivered'
+        );
+      })
+    );
+  }
+
+  /**
+   * Get pending orders (for material transfer - orders with isDelivered=Pending)
+   */
+  getPendingOrders(): Observable<MaterialTransfer[]> {
+    return this.apiService.get<ApiResponse<any[]>>(`${ENDPOINTS.ORDERS.BASE}?isDelivered=Pending`).pipe(
+      map(response => {
+        const orders = response.data || [];
+        return orders.map((order: any) => ({
+          id: order.orderId || order.id,
+          orderNo: order.orderNo,
+          orderDate: order.orderDate,
+          doctorName: order.doctorName,
+          hospitalName: order.hospitalName,
+          operationDate: order.operationDate,
+          operationTime: order.operationTime,
+          materialSendDate: order.materialSendDate,
+          deliveryDate: order.deliveryDate,
+          itemsSummary: order.items || [],
+          status: order.status,
+          remarks: order.remarks,
+          deliveryRemarks: order.deliveryRemarks,
+          proofUrl: order.proofUrl,
+          audits: order.audits || []
+        }));
+      })
+    );
+  }
+
+  /**
+   * Mark material as delivered
+   */
+  markDelivered(formData: MaterialTransferFormData): Observable<MaterialTransfer> {
+    const payload = {
+      ...formData,
+      status: 'Material Delivered'
+    };
+    
+    return this.apiService.put<ApiResponse<MaterialTransfer>>(
+      `${ENDPOINTS.ORDERS.BASE}/${formData.orderId}/material-delivered`,
+      payload
+    ).pipe(
+      map(response => {
+        if (response.success && response.data) {
+          return response.data;
+        }
+        throw new Error(response.message || 'Failed to mark material as delivered');
+      })
+    );
+  }
+
+  /**
+   * Quick mark delivered (simplified version without remarks/proof)
+   */
+  quickMarkDelivered(orderId: number, deliveryDate: string): Observable<MaterialTransfer> {
+    const payload = {
+      orderId,
+      deliveryDate,
+      status: 'Material Delivered'
+    };
+    
+    return this.apiService.put<ApiResponse<MaterialTransfer>>(
+      `${ENDPOINTS.ORDERS.BASE}/${orderId}/material-delivered`,
+      payload
+    ).pipe(
+      map(response => {
+        if (response.success && response.data) {
+          return response.data;
+        }
+        throw new Error(response.message || 'Failed to mark material as delivered');
+      })
+    );
+  }
+
+  /**
+   * Get material transfers by date (for Material Send Day Board)
+   */
+  getTransfersByDate(date: string): Observable<MaterialTransfer[]> {
+    return this.apiService.get<ApiResponse<MaterialTransfer[]>>(`${ENDPOINTS.ORDERS.BASE}?materialSendDate=${date}`).pipe(
+      map(response => response.data || [])
+    );
+  }
+
+  /**
+   * Upload proof file for material transfer
+   */
+  uploadProof(orderId: number, file: File): Observable<string> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    return this.apiService.post<ApiResponse<{ url: string }>>(
+      `${ENDPOINTS.ORDERS.BASE}/${orderId}/upload-proof`,
+      formData
+    ).pipe(
+      map(response => {
+        if (response.success && response.data) {
+          return response.data.url;
+        }
+        throw new Error(response.message || 'Failed to upload proof');
+      })
+    );
+  }
+
+  /**
+   * Assign material delivery
+   */
+  assignMaterialDelivery(formData: MaterialDeliveryFormData): Observable<any> {
+    console.log('Posting to MaterialDeliveries API:', formData);
+    return this.apiService.post<any>(
+      ENDPOINTS.MATERIAL_DELIVERIES.CREATE,
+      formData
+    ).pipe(
+      map(response => {
+        console.log('MaterialDeliveries API Response:', response);
+        // Handle both wrapped and unwrapped responses
+        if (response && response.success !== undefined) {
+          if (response.success) {
+            return response.data || response;
+          }
+          throw new Error(response.message || 'Failed to assign material delivery');
+        }
+        // If response doesn't have success field, return it directly
+        return response;
+      })
+    );
+  }
+
+  /**
+   * Get all material deliveries
+   */
+  getMaterialDeliveries(): Observable<MaterialDelivery[]> {
+    return this.apiService.get<any>(ENDPOINTS.MATERIAL_DELIVERIES.LIST).pipe(
+      map(response => {
+        console.log('Material deliveries response:', response);
+        // Handle both wrapped responses and direct data
+        if (response && response.data) {
+          return response.data;
+        }
+        return response || [];
+      })
+    );
+  }
+}

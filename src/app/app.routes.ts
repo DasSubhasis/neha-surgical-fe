@@ -81,7 +81,7 @@ export const routes: Routes = [
       },
       {
         path: 'material-transfer',
-        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/material-transfer/material-transfer.component').then(m => m.MaterialTransferComponent)
       },
       {
         path: 'assistant-operations',

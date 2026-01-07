@@ -207,6 +207,13 @@ export const ENDPOINTS = {
     DELETE: (id: string | number) => `/MaterialTransfer/${id}`,
   },
 
+  // Material Deliveries
+  MATERIAL_DELIVERIES: {
+    BASE: '/MaterialDeliveries',
+    LIST: '/MaterialDeliveries',
+    CREATE: '/MaterialDeliveries',
+  },
+
   // Consumption & Billing
   CONSUMPTION_BILLING: {
     BASE: '/ConsumptionBilling',
