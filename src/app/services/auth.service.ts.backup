@@ -130,12 +130,7 @@ export class AuthService {
    */
   sendOtp(email: string): Observable<OtpResponse> {
     const url = this.buildUrl(ENDPOINTS.AUTH.SEND_OTP);
-    
-    return this.http.post<OtpResponse>(url, { email }, {
-      headers: new HttpHeaders({ 'Content-Type': 'application/json' })
-    }).pipe(
-      tap(response => {
-        // Store OTP-related data
+    // Store OTP-related data
         localStorage.setItem(STORAGE_KEYS.OTP_EMAIL, email);
         localStorage.setItem(STORAGE_KEYS.OTP_SENT_TIME, new Date().toISOString());
         if (response.data?.expiresIn) {
@@ -145,6 +140,11 @@ export class AuthService {
       catchError(error => {
         console.error('Send OTP error:', error);
         return throwError(() => ({
+      }),
+      catchError(error => {
+        console.error('Send OTP error:', error);
+        return throwError(() => ({
+          success: false,
           message: error.error?.message || ERROR_MESSAGES.NETWORK_ERROR
         }));
       })
@@ -161,16 +161,16 @@ export class AuthService {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
       tap(response => {
-        if (response.data) {
+        if (response.success && response.data) {
+          this.handleAuthSuccess(response.data);
+        }
+      }),data) {
           this.handleAuthSuccess(response.data);
         }
       }),
       catchError(error => {
         console.error('Verify OTP error:', error);
         return throwError(() => ({
-          message: error.error?.message || ERROR_MESSAGES.UNKNOWN_ERROR
-        }));
-      })
     );
   }
 
@@ -184,6 +184,10 @@ export class AuthService {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
       tap(response => {
+        if (response.success) {
+          localStorage.setItem(STORAGE_KEYS.OTP_SENT_TIME, new Date().toISOString());
+          if (response.otpExpires) {
+            localStorage.setItem(STORAGE_KEYS.OTP_EXPIRES, response.otpExpires);
         localStorage.setItem(STORAGE_KEYS.OTP_SENT_TIME, new Date().toISOString());
         if (response.data?.expiresIn) {
           localStorage.setItem(STORAGE_KEYS.OTP_EXPIRES, response.data.expiresIn);
@@ -192,10 +196,6 @@ export class AuthService {
       catchError(error => {
         console.error('Resend OTP error:', error);
         return throwError(() => ({
-          message: error.error?.message || ERROR_MESSAGES.NETWORK_ERROR
-        }));
-      })
-    );
   }
 
   /**
@@ -211,13 +211,14 @@ export class AuthService {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
       tap(response => {
-        if (response.data) {
+        if (response.success && response.data) {
           this.handleAuthSuccess(response.data);
         }
       }),
       catchError(error => {
         console.error('Login error:', error);
         return throwError(() => ({
+          success: false,
           message: error.error?.message || ERROR_MESSAGES.UNAUTHORIZED
         }));
       })
@@ -227,7 +228,11 @@ export class AuthService {
   /**
    * Handle successful authentication
    */
-  private handleAuthSuccess(data: { 
+  private handleAuthSuccess(data: { token?: string; user?: User; expiresAt?: string }): void {
+    // Check if this is first time login
+    const hasLoggedInBefore = localStorage.getItem(STORAGE_KEYS.HAS_LOGGED_IN_BEFORE);
+    const isFirstTime = !hasLoggedInBefore;
+
     token?: string; 
     refreshToken?: string; 
     user?: {
@@ -279,10 +284,6 @@ export class AuthService {
       localStorage.setItem(STORAGE_KEYS.USER_ROLE_NAME, user.roleName || '');
       localStorage.setItem(STORAGE_KEYS.USER_PHONE, user.phoneNo || '');
 
-      this.currentUserSubject.next(user);
-      this.isFirstTimeLoginSubject.next(isFirstTime);
-    }
-
     // Clear OTP data
     localStorage.removeItem(STORAGE_KEYS.OTP_EMAIL);
     localStorage.removeItem(STORAGE_KEYS.OTP_SENT_TIME);
@@ -310,7 +311,7 @@ export class AuthService {
     localStorage.setItem(STORAGE_KEYS.IS_FIRST_TIME_LOGIN, String(isFirstTime));
     localStorage.setItem(STORAGE_KEYS.USER_ID, String(user.id));
     localStorage.setItem(STORAGE_KEYS.USER_EMAIL, user.email);
-    localStorage.setItem(STORAGE_KEYS.USER_NAME, user.name || '');
+    localStorage.setItem(STORAGE_KEYS.USER_NAME, user.name);
 
     this.currentUserSubject.next(user);
     this.isFirstTimeLoginSubject.next(isFirstTime);
@@ -416,10 +417,10 @@ export class AuthService {
       })
     }).pipe(
       tap(response => {
-        if (response.data?.token) {
+        if (response.success && response.data?.token) {
           localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, response.data.token);
-          if (response.data.refreshToken) {
-            localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, response.data.refreshToken);
+          if (response.data.expiresAt) {
+            localStorage.setItem(STORAGE_KEYS.TOKEN_EXPIRES, response.data.expiresAt);
           }
         }
       }),
@@ -427,6 +428,7 @@ export class AuthService {
         console.error('Refresh token error:', error);
         this.logout();
         return throwError(() => ({
+          success: false,
           message: ERROR_MESSAGES.UNAUTHORIZED
         }));
       })

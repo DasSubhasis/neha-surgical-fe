@@ -50,9 +50,9 @@ export const ENDPOINTS = {
     LOGOUT: '/Logout',
     REFRESH_TOKEN: '/RefreshToken',
     VERIFY_TOKEN: '/VerifyToken',
-    SEND_OTP: '/SendOTP',
-    VERIFY_OTP: '/VerifyOTP',
-    RESEND_OTP: '/ResendOTP',
+    SEND_OTP: '/OtpAuth/send-otp',
+    VERIFY_OTP: '/OtpAuth/verify-otp',
+    RESEND_OTP: '/OtpAuth/send-otp',
   },
   
   // User Management
@@ -332,10 +332,14 @@ export const SUCCESS_MESSAGES = {
 // Local storage keys
 export const STORAGE_KEYS = {
   AUTH_TOKEN: 'authToken',
+  REFRESH_TOKEN: 'refreshToken',
   TOKEN_EXPIRES: 'tokenExpires',
   USER_ID: 'userId',
   USER_NAME: 'userName',
   USER_EMAIL: 'userEmail',
+  USER_ROLE_ID: 'userRoleId',
+  USER_ROLE_NAME: 'userRoleName',
+  USER_PHONE: 'userPhone',
   USER_CLUB_CATEGORY: 'userClubCategory',
   USER_BAND: 'userBand',
   IS_AUTHENTICATED: 'isAuthenticated',

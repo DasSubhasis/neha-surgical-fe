@@ -72,22 +72,9 @@
         <form (ngSubmit)="handleSendOTP()" class="space-y-3">
           <!-- Email Field -->
           <div>
-            <div class="flex items-center justify-between mb-1">
-              <label for="email" class="block text-sm font-semibold text-blue-800">
-                Email Address
-              </label>
-              <!-- Demo Info Button -->
-              <button
-                type="button"
-                (click)="toggleDemoEmails()"
-                class="text-blue-600 hover:text-blue-700 focus:outline-none"
-                title="Show demo email addresses"
-              >
-                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                </svg>
-              </button>
-            </div>
+            <label for="email" class="block text-sm font-semibold text-blue-800 mb-1">
+              Email Address
+            </label>
             <div class="relative">
               <input
                 id="email"
@@ -104,30 +91,6 @@
                 <svg class="w-5 h-5 text-red-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
-              </div>
-            </div>
-          </div>
-
-          <!-- Demo Email Popup -->
-          <div *ngIf="showDemoEmails" class="relative">
-            <div class="absolute top-0 left-0 right-0 z-10 bg-blue-50 border border-blue-200 rounded-lg p-2 shadow-lg">
-              <div class="flex items-center justify-between mb-1">
-                <h3 class="text-xs font-semibold text-blue-800">Demo Email Addresses:</h3>
-                <button
-                  type="button"
-                  (click)="closeDemoEmails()"
-                  class="text-blue-600 hover:text-blue-700 focus:outline-none"
-                >
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-              <div class="space-y-0.5 text-xs text-blue-700">
-                <div *ngFor="let demo of demoEmails" class="flex justify-between">
-                  <span>{{ demo.email }}</span>
-                  <span class="text-blue-500">({{ demo.role }})</span>
-                </div>
               </div>
             </div>
           </div>
@@ -222,12 +185,6 @@
           <h2 class="text-xl font-bold text-gray-900">Verify OTP</h2>
           <p class="text-xs text-gray-500 mt-1">Enter the 6-digit code sent to</p>
           <p class="text-sm font-semibold text-blue-600">{{ email }}</p>
-        </div>
-
-        <!-- Demo OTP Display -->
-        <div *ngIf="demoOTP" class="mb-3 bg-green-50 border border-green-200 rounded-lg p-3 text-center">
-          <p class="text-xs text-green-700">Demo OTP (for testing):</p>
-          <p class="text-lg font-bold text-green-800 tracking-widest">{{ demoOTP }}</p>
         </div>
 
         <!-- Error Message -->
