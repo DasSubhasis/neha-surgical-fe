@@ -617,6 +617,17 @@ export class ItemComponent implements OnInit {
     this.formData.status = this.formData.status === 'Active' ? 'Inactive' : 'Active';
   }
 
+  // Auto-generate item name based on Item Group Type, Specification, and Size
+  updateItemName(): void {
+    const itemGroupName = this.itemGroupOptions.find(ig => ig.itemGroupId === this.formData.itemGroupId)?.name || '';
+    const specificationName = this.specificationOptions.find(s => s.specificationId === this.formData.specificationId)?.name || '';
+    const sizeName = this.sizeOptions.find(s => s.sizeId === this.formData.sizeId)?.name || '';
+
+    // Construct item name from the three parts
+    const parts = [itemGroupName, specificationName, sizeName].filter(part => part.trim() !== '');
+    this.formData.name = parts.join(' - ');
+  }
+
   onBreadcrumbNavigate(page: string): void {
     this.router.navigate(['/' + page]);
   }

@@ -35,6 +35,19 @@ export interface MaterialTransferAudit {
   action: string;
 }
 
+export interface DeliveryUser {
+  userId: number;
+  username: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  employeeId: string | null;
+  identifier: string | null;
+  roleId: number;
+  roleName: string;
+  isActive: string;
+}
+
 export interface MaterialTransferFormData {
   orderId: number;
   deliveryDate: string;
@@ -224,6 +237,22 @@ export class MaterialTransferService {
     return this.apiService.get<any>(ENDPOINTS.MATERIAL_DELIVERIES.LIST).pipe(
       map(response => {
         console.log('Material deliveries response:', response);
+        // Handle both wrapped responses and direct data
+        if (response && response.data) {
+          return response.data;
+        }
+        return response || [];
+      })
+    );
+  }
+
+  /**
+   * Get users with Delivery role (roleId = 6)
+   */
+  getDeliveryUsers(): Observable<DeliveryUser[]> {
+    return this.apiService.get<any>('/Users/role/6').pipe(
+      map(response => {
+        console.log('Delivery users response:', response);
         // Handle both wrapped responses and direct data
         if (response && response.data) {
           return response.data;

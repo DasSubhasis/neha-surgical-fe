@@ -14,6 +14,8 @@ export interface Doctor {
   dob?: string;
   doa?: string;
   specialization: string;
+  registrationNumber?: string;
+  location?: string;
   remarks?: string;
   isActive: string;
   status?: string;
@@ -30,6 +32,8 @@ export interface DoctorFormData {
   dob: string;
   doa: string;
   specialization: string;
+  registrationNumber: string;
+  location: string;
   remarks: string;
   isActive: string;
 }
@@ -69,6 +73,8 @@ export class DoctorService {
       dob: doctorData.dob || '2000-01-01',
       doa: doctorData.doa || '2000-01-01',
       identifier: doctorData.identifier || '',
+      registrationNumber: doctorData.registrationNumber || '',
+      location: doctorData.location || '',
       remarks: doctorData.remarks || '',
       isActive: doctorData.isActive || 'Y'
     };
@@ -88,6 +94,8 @@ export class DoctorService {
       dob: doctorData.dob || '2000-01-01',
       doa: doctorData.doa || '2000-01-01',
       identifier: doctorData.identifier || '',
+      registrationNumber: doctorData.registrationNumber || '',
+      location: doctorData.location || '',
       remarks: doctorData.remarks || '',
       isActive: doctorData.isActive || 'Y'
     };

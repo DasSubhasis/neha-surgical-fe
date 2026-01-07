@@ -57,6 +57,8 @@ export class DoctorComponent implements OnInit {
     dob: '',
     doa: '',
     specialization: '',
+    registrationNumber: '',
+    location: '',
     remarks: '',
     isActive: 'Y'
   };
@@ -271,6 +273,8 @@ export class DoctorComponent implements OnInit {
       dob: '',
       doa: '',
       specialization: '',
+      registrationNumber: '',
+      location: '',
       remarks: '',
       isActive: 'Y'
     };
@@ -289,6 +293,8 @@ export class DoctorComponent implements OnInit {
       dob: '',
       doa: '',
       specialization: '',
+      registrationNumber: '',
+      location: '',
       remarks: '',
       isActive: 'Y'
     };
@@ -305,6 +311,8 @@ export class DoctorComponent implements OnInit {
       dob: doctor.dob || '',
       doa: doctor.doa || '',
       specialization: doctor.specialization || '',
+      registrationNumber: doctor.registrationNumber || '',
+      location: doctor.location || '',
       remarks: doctor.remarks || '',
       isActive: doctor.isActive || 'Y'
     };

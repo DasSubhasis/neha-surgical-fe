@@ -8,7 +8,7 @@ import { AllCommunityModule } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent } from '../action-dropdown/action-dropdown.component';
 import { ToastService } from '../../services/toast.service';
-import { MaterialTransferService, MaterialTransfer, MaterialTransferFormData, MaterialDelivery } from '../../services/material-transfer.service';
+import { MaterialTransferService, MaterialTransfer, MaterialTransferFormData, MaterialDelivery, DeliveryUser } from '../../services/material-transfer.service';
 import { OrderService, Order } from '../../services/order.service';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
@@ -54,6 +54,7 @@ export class MaterialTransferComponent implements OnInit {
   isAssignModalOpen = false;
   selectedOrderForAssign: MaterialTransfer | null = null;
   assignLoading = false;
+  deliveryUsers: DeliveryUser[] = [];
 
   // Transfer form
   transferForm: MaterialTransferFormData = {
@@ -68,6 +69,7 @@ export class MaterialTransferComponent implements OnInit {
   assignForm = {
     deliveryDate: this.getTodayDate(),
     deliveredBy: '',
+    deliveredByUserId: 0,
     remarks: ''
   };
 
@@ -307,6 +309,7 @@ export class MaterialTransferComponent implements OnInit {
   ngOnInit(): void {
     this.fetchData();
     this.fetchPendingOrders();
+    this.fetchDeliveryUsers();
   }
 
   fetchData(): void {
@@ -335,6 +338,19 @@ export class MaterialTransferComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error fetching pending orders:', error);
+      }
+    });
+  }
+
+  fetchDeliveryUsers(): void {
+    this.materialTransferService.getDeliveryUsers().subscribe({
+      next: (data) => {
+        this.deliveryUsers = data;
+        console.log('Delivery users loaded:', this.deliveryUsers);
+      },
+      error: (error) => {
+        console.error('Error fetching delivery users:', error);
+        this.toastService.error('Failed to load delivery users');
       }
     });
   }
@@ -571,6 +587,7 @@ export class MaterialTransferComponent implements OnInit {
     this.assignForm = {
       deliveryDate: this.getTodayDate(),
       deliveredBy: '',
+      deliveredByUserId: 0,
       remarks: ''
     };
     this.isAssignModalOpen = true;
@@ -589,15 +606,21 @@ export class MaterialTransferComponent implements OnInit {
       return;
     }
 
-    if (!this.assignForm.deliveredBy) {
+    if (!this.assignForm.deliveredByUserId || this.assignForm.deliveredByUserId === 0) {
       this.toastService.error('Delivered By is required');
       return;
     }
 
+    // Get the selected user's full display name
+    const selectedUser = this.deliveryUsers.find(u => u.userId === this.assignForm.deliveredByUserId);
+    const deliveredByDisplay = selectedUser 
+      ? `${selectedUser.fullName}-${selectedUser.employeeId || ''}-${selectedUser.identifier || ''}` 
+      : '';
+
     const payload = {
       orderId: this.selectedOrderForAssign.id,
       deliveryDate: this.assignForm.deliveryDate,
-      deliveredBy: this.assignForm.deliveredBy,
+      deliveredBy: deliveredByDisplay,
       remarks: this.assignForm.remarks || '',
       deliveryStatus: 'Delivered',
       createdBy: 'current-user' // TODO: Get from auth service
@@ -667,5 +690,9 @@ export class MaterialTransferComponent implements OnInit {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  getDeliveryUserDisplay(user: DeliveryUser): string {
+    return `${user.fullName}-${user.employeeId || ''}-${user.identifier || ''}`;
   }
 }

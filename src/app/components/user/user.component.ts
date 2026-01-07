@@ -59,6 +59,8 @@ export class UserComponent implements OnInit {
     email: '',
     fullName: '',
     phone: '',
+    employeeId: '',
+    identifier: '',
     roleId: 0,
     status: 'Active',
     isActive: 'Y'
@@ -229,6 +231,8 @@ export class UserComponent implements OnInit {
           email: user.email,
           fullName: user.fullName,
           phone: user.phone,
+          employeeId: user.employeeId,
+          identifier: user.identifier,
           roleId: user.roleId,
           roleName: user.roleName || 'N/A',
           status: user.isActive === 'Y' ? 'Active' : 'Inactive',
@@ -298,6 +302,8 @@ export class UserComponent implements OnInit {
       email: '',
       fullName: '',
       phone: '',
+      employeeId: '',
+      identifier: '',
       roleId: 0,
       status: 'Active',
       isActive: 'Y'
@@ -312,6 +318,8 @@ export class UserComponent implements OnInit {
       email: user.email || '',
       fullName: user.fullName || '',
       phone: user.phone || '',
+      employeeId: user.employeeId || '',
+      identifier: user.identifier || '',
       roleId: user.roleId || 0,
       status: user.status || 'Active',
       isActive: user.isActive || 'Y'
@@ -327,6 +335,8 @@ export class UserComponent implements OnInit {
       email: '',
       fullName: '',
       phone: '',
+      employeeId: '',
+      identifier: '',
       roleId: 0,
       status: 'Active',
       isActive: 'Y'

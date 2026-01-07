@@ -85,7 +85,7 @@ export const routes: Routes = [
       },
       {
         path: 'assistant-operations',
-        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/assistant-operations/assistant-operations.component').then(m => m.AssistantOperationsComponent)
       },
       {
         path: 'consumption-billing',

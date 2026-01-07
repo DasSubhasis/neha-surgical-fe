@@ -11,6 +11,8 @@ export interface User {
   email: string;
   fullName: string;
   phone: string;
+  employeeId?: string;
+  identifier?: string;
   roleId: number;
   roleName?: string;
   role?: Role;
@@ -24,6 +26,8 @@ export interface UserFormData {
   email: string;
   fullName: string;
   phone: string;
+  employeeId: string;
+  identifier: string;
   roleId: number;
   status: string;
   isActive: string;
@@ -94,6 +98,8 @@ export class UserService {
       email: userData.email,
       fullName: userData.fullName,
       phone: userData.phone || '',
+      employeeId: userData.employeeId || '',
+      identifier: userData.identifier || '',
       roleId: userData.roleId,
       isActive: userData.isActive || 'Y'
     };
@@ -109,6 +115,8 @@ export class UserService {
       email: userData.email,
       fullName: userData.fullName,
       phone: userData.phone || '',
+      employeeId: userData.employeeId || '',
+      identifier: userData.identifier || '',
       roleId: userData.roleId,
       isActive: userData.isActive || 'Y'
     };

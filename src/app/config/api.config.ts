@@ -214,6 +214,13 @@ export const ENDPOINTS = {
     CREATE: '/MaterialDeliveries',
   },
 
+  // Assistant Operations
+  ASSISTANT_OPERATIONS: {
+    BASE: '/AssistantOperations',
+    CHECK_IN: '/AssistantOperations/CheckIn',
+    CHECK_OUT: '/AssistantOperations/CheckOut',
+  },
+
   // Consumption & Billing
   CONSUMPTION_BILLING: {
     BASE: '/ConsumptionBilling',
