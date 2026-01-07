@@ -105,7 +105,7 @@ export const routes: Routes = [
       },
       {
         path: 'profile',
-        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/profile/profile.component').then(m => m.ProfileComponent)
       }
     ]
   },
