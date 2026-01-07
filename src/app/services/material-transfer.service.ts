@@ -261,4 +261,28 @@ export class MaterialTransferService {
       })
     );
   }
+
+  /**
+   * Mark a material delivery as delivered
+   */
+  markMaterialDelivered(deliveryId: number, deliveredBy: string, remarks: string): Observable<any> {
+    console.log('Marking delivery as delivered:', { deliveryId, deliveredBy, remarks });
+    return this.apiService.post<any>(
+      `${ENDPOINTS.MATERIAL_DELIVERIES.BASE}/${deliveryId}/mark-delivered`,
+      { deliveredBy, remarks }
+    ).pipe(
+      map(response => {
+        console.log('Mark delivered API Response:', response);
+        // Handle both wrapped and unwrapped responses
+        if (response && response.success !== undefined) {
+          if (response.success) {
+            return response.data || response;
+          }
+          throw new Error(response.message || 'Failed to mark delivery as delivered');
+        }
+        // If response doesn't have success field, return it directly
+        return response;
+      })
+    );
+  }
 }
