@@ -34,6 +34,7 @@ export class MaterialDeliveryComponent implements OnInit {
   statusOptions = ['Assigned', 'Delivered'];
 
   // Modals
+  isFilterModalOpen = false;
   viewDeliveryRow: (MaterialDelivery & { itemsSummary: any[] }) | null = null;
   viewRowLoading = false;
   showMarkDeliveredModal = false;
@@ -122,6 +123,19 @@ export class MaterialDeliveryComponent implements OnInit {
     this.searchTerm = '';
     this.selectedStatus = 'Assigned';
     this.applyFilters();
+  }
+
+  openFilterModal(): void {
+    this.isFilterModalOpen = true;
+  }
+
+  closeFilterModal(): void {
+    this.isFilterModalOpen = false;
+  }
+
+  applyAndCloseFilter(): void {
+    this.applyFilters();
+    this.closeFilterModal();
   }
 
   getStatusBadgeClass(status: string): string {
@@ -247,14 +261,14 @@ export class MaterialDeliveryComponent implements OnInit {
       return;
     }
 
-    const deliveredBy = currentUser.name || currentUser.email;
+    const deliveredById = currentUser.systemUserId || 0;
     const deliveryId = this.viewDeliveryRow.deliveryId;
 
     this.markingDelivered = true;
 
     this.materialTransferService.markMaterialDelivered(
       deliveryId,
-      deliveredBy,
+      deliveredById,
       this.markDeliveredRemarks || 'Delivery completed'
     ).subscribe({
       next: (response) => {

@@ -73,6 +73,18 @@ export class MaterialTransferComponent implements OnInit {
     remarks: ''
   };
 
+  // Edit delivery form
+  editForm = {
+    deliveryId: 0,
+    orderId: 0,
+    deliveryDate: '',
+    deliveredByUserId: 0,
+    remarks: '',
+    deliveryStatus: 'Assigned'
+  };
+  isEditModalOpen = false;
+  editLoading = false;
+
   // AG Grid configuration
   columnDefs: ColDef[] = [
     {
@@ -118,14 +130,19 @@ export class MaterialTransferComponent implements OnInit {
     {
       headerName: 'Actions',
       field: 'actions',
-      width: 90,
+      width: 130,
       pinned: 'right',
       cellRenderer: (params: any) => {
         return `
-          <div class="flex items-center justify-center h-full">
-            <button class="view-delivery-btn flex items-center justify-center text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded" title="View Details">
+          <div class="flex items-center justify-center gap-1 h-full">
+            <button class="view-delivery-btn flex items-center justify-center text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded" title="View Details">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 640 640">
                 <path d="M320 96C239.2 96 174.5 132.8 127.4 176.6C80.6 220.1 49.3 272 34.4 307.7C31.1 315.6 31.1 324.4 34.4 332.3C49.3 368 80.6 420 127.4 463.4C174.5 507.1 239.2 544 320 544C400.8 544 465.5 507.2 512.6 463.4C559.4 419.9 590.7 368 605.6 332.3C608.9 324.4 608.9 315.6 605.6 307.7C590.7 272 559.4 220 512.6 176.6C465.5 132.9 400.8 96 320 96zM176 320C176 240.5 240.5 176 320 176C399.5 176 464 240.5 464 320C464 399.5 399.5 464 320 464C240.5 464 176 399.5 176 320zM320 256C320 291.3 291.3 320 256 320C244.5 320 233.7 317 224.3 311.6C223.3 322.5 224.2 333.7 227.2 344.8C240.9 396 293.6 426.4 344.8 412.7C396 399 426.4 346.3 412.7 295.1C400.5 249.4 357.2 220.3 311.6 224.3C316.9 233.6 320 244.4 320 256z"/>
+              </svg>
+            </button>
+            <button class="edit-delivery-btn flex items-center justify-center text-indigo-600 hover:text-indigo-900 p-1 hover:bg-indigo-50 rounded" title="Edit">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
               </svg>
             </button>
           </div>
@@ -135,6 +152,8 @@ export class MaterialTransferComponent implements OnInit {
         const target = params.event.target as HTMLElement;
         if (target.closest('.view-delivery-btn')) {
           this.viewOrderDetails(params.data.deliveryId);
+        } else if (target.closest('.edit-delivery-btn')) {
+          this.openEditModal(params.data);
         }
       }
     }
@@ -582,6 +601,72 @@ export class MaterialTransferComponent implements OnInit {
     this.viewDeliveryRow = null;
   }
 
+  openEditModal(delivery: any): void {
+    this.editForm = {
+      deliveryId: delivery.deliveryId,
+      orderId: delivery.orderId,
+      deliveryDate: delivery.deliveryDate,
+      deliveredByUserId: delivery.deliveredById || 0,
+      remarks: delivery.remarks || '',
+      deliveryStatus: delivery.deliveryStatus || 'Assigned'
+    };
+    this.isEditModalOpen = true;
+  }
+
+  closeEditModal(): void {
+    this.isEditModalOpen = false;
+    this.editForm = {
+      deliveryId: 0,
+      orderId: 0,
+      deliveryDate: '',
+      deliveredByUserId: 0,
+      remarks: '',
+      deliveryStatus: 'Assigned'
+    };
+  }
+
+  handleEditSubmit(): void {
+    // Validation
+    if (!this.editForm.deliveryDate) {
+      this.toastService.error('Please select delivery date');
+      return;
+    }
+    if (!this.editForm.deliveredByUserId || this.editForm.deliveredByUserId === 0) {
+      this.toastService.error('Please select delivery person');
+      return;
+    }
+
+    const payload = {
+      orderId: this.editForm.orderId,
+      deliveryDate: this.editForm.deliveryDate,
+      deliveredById: this.editForm.deliveredByUserId,
+      remarks: this.editForm.remarks || '',
+      deliveryStatus: this.editForm.deliveryStatus,
+      createdBy: 'current-user' // TODO: Get from auth service
+    };
+    
+    console.log('Updating delivery:', this.editForm.deliveryId, payload);
+    
+    this.editLoading = true;
+    this.materialTransferService.updateMaterialDelivery(this.editForm.deliveryId, payload).subscribe({
+      next: (response) => {
+        console.log('Update successful:', response);
+        this.toastService.success('Delivery updated successfully');
+        this.editLoading = false;
+        this.closeEditModal();
+        // Refresh the grid data
+        this.fetchData();
+        // Re-fetch the delivery details to update the view modal
+        this.viewOrderDetails(this.editForm.deliveryId);
+      },
+      error: (error) => {
+        console.error('Update failed:', error);
+        this.toastService.error(error.message || 'Failed to update delivery');
+        this.editLoading = false;
+      }
+    });
+  }
+
   openAssignModal(order: MaterialTransfer): void {
     this.selectedOrderForAssign = order;
     this.assignForm = {
@@ -620,7 +705,7 @@ export class MaterialTransferComponent implements OnInit {
     const payload = {
       orderId: this.selectedOrderForAssign.id,
       deliveryDate: this.assignForm.deliveryDate,
-      deliveredBy: deliveredByDisplay,
+      deliveredById: this.assignForm.deliveredByUserId,
       remarks: this.assignForm.remarks || '',
       deliveryStatus: 'Assigned',
       createdBy: 'current-user' // TODO: Get from auth service
@@ -635,6 +720,7 @@ export class MaterialTransferComponent implements OnInit {
         this.toastService.success('Order assigned successfully');
         this.assignLoading = false;
         this.closeAssignModal();
+        this.fetchData(); // Refresh main grid
         this.fetchPendingOrders();
       },
       error: (error) => {

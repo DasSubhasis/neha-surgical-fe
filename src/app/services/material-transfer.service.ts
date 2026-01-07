@@ -58,7 +58,7 @@ export interface MaterialTransferFormData {
 export interface MaterialDeliveryFormData {
   orderId: number;
   deliveryDate: string;
-  deliveredBy: string;
+  deliveredById: number;
   remarks: string;
   deliveryStatus: string;
   createdBy: string;
@@ -163,16 +163,43 @@ export class MaterialTransferService {
       deliveryDate,
       status: 'Material Delivered'
     };
-    
-    return this.apiService.put<ApiResponse<MaterialTransfer>>(
-      `${ENDPOINTS.ORDERS.BASE}/${orderId}/material-delivered`,
+
+    return this.apiService.post<ApiResponse<MaterialTransfer>>(
+      `${ENDPOINTS.ORDERS.BASE}/${orderId}/quick-delivered`,
       payload
     ).pipe(
       map(response => {
         if (response.success && response.data) {
           return response.data;
         }
-        throw new Error(response.message || 'Failed to mark material as delivered');
+        throw new Error(response.message || 'Failed to mark as delivered');
+      })
+    );
+  }
+
+  /**
+   * Update material delivery
+   */
+  updateMaterialDelivery(deliveryId: number, formData: MaterialDeliveryFormData): Observable<any> {
+    const payload = {
+      orderId: formData.orderId,
+      deliveryDate: formData.deliveryDate,
+      deliveredById: formData.deliveredById,
+      remarks: formData.remarks || '',
+      deliveryStatus: formData.deliveryStatus,
+      updatedBy: formData.createdBy // Using createdBy field as updatedBy
+    };
+
+    return this.apiService.put<ApiResponse<any>>(
+      `${ENDPOINTS.MATERIAL_DELIVERIES.BASE}/${deliveryId}`,
+      payload
+    ).pipe(
+      map(response => {
+        // Handle both success field and message-only responses
+        if (response.success !== false && (response.success === true || response.message)) {
+          return response.data || response;
+        }
+        throw new Error(response.message || 'Failed to update material delivery');
       })
     );
   }
@@ -265,11 +292,11 @@ export class MaterialTransferService {
   /**
    * Mark a material delivery as delivered
    */
-  markMaterialDelivered(deliveryId: number, deliveredBy: string, remarks: string): Observable<any> {
-    console.log('Marking delivery as delivered:', { deliveryId, deliveredBy, remarks });
+  markMaterialDelivered(deliveryId: number, deliveredById: number, remarks: string): Observable<any> {
+    console.log('Marking delivery as delivered:', { deliveryId, deliveredById, remarks });
     return this.apiService.post<any>(
       `${ENDPOINTS.MATERIAL_DELIVERIES.BASE}/${deliveryId}/mark-delivered`,
-      { deliveredBy, remarks }
+      { deliveredById, remarks }
     ).pipe(
       map(response => {
         console.log('Mark delivered API Response:', response);
