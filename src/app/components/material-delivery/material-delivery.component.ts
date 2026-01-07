@@ -30,8 +30,8 @@ export class MaterialDeliveryComponent implements OnInit {
 
   // Search and Filter
   searchTerm = '';
-  selectedStatus = 'All';
-  statusOptions = ['All', 'Delivered', 'Assigned', 'Pending'];
+  selectedStatus = 'Assigned';
+  statusOptions = ['Assigned', 'Delivered'];
 
   // Modals
   viewDeliveryRow: (MaterialDelivery & { itemsSummary: any[] }) | null = null;
@@ -76,7 +76,8 @@ export class MaterialDeliveryComponent implements OnInit {
 
     this.materialTransferService.getMaterialDeliveries().subscribe({
       next: (data) => {
-        this.deliveries = data;
+        // Filter out 'Pending' deliveries - only show 'Assigned' and 'Delivered'
+        this.deliveries = data.filter(d => d.deliveryStatus !== 'Pending');
         this.applyFilters();
         this.loading = false;
         this.hasError = false;
@@ -93,10 +94,8 @@ export class MaterialDeliveryComponent implements OnInit {
   applyFilters(): void {
     let filtered = [...this.deliveries];
 
-    // Apply status filter
-    if (this.selectedStatus !== 'All') {
-      filtered = filtered.filter(d => d.deliveryStatus === this.selectedStatus);
-    }
+    // Apply status filter - always filter by selected status
+    filtered = filtered.filter(d => d.deliveryStatus === this.selectedStatus);
 
     // Apply search filter
     if (this.searchTerm.trim()) {
@@ -121,7 +120,7 @@ export class MaterialDeliveryComponent implements OnInit {
 
   clearFilters(): void {
     this.searchTerm = '';
-    this.selectedStatus = 'All';
+    this.selectedStatus = 'Assigned';
     this.applyFilters();
   }
 
