@@ -71,7 +71,7 @@ export class SidebarComponent implements OnInit {
         { key: 'specification', label: 'Specification', icon: 'list' },
         { key: 'size', label: 'Size', icon: 'ruler' },
         { key: 'category', label: 'Category', icon: 'folder' },
-        { key: 'item-group', label: 'Item Group', icon: 'user-cog' },
+        { key: 'item-group', label: 'Item Group', icon: 'boxes' },
         { key: 'item', label: 'Items', icon: 'sitemap' }
         
       ]
@@ -80,7 +80,8 @@ export class SidebarComponent implements OnInit {
       key: 'order', label: 'Transactions', icon: 'receipt', submenu: [
         { key: 'order-entry', label: 'Order Entry', icon: 'plus-circle' },
         { key: 'assistant-assignment', label: 'Assistant Assignment', icon: 'handshake' },
-        { key: 'material-transfer', label: 'Material Transfer', icon: 'truck' },
+        { key: 'material-transfer', label: 'Material Send', icon: 'truck' },
+        { key: 'material-delivery', label: 'Material Delivery', icon: 'shipping-fast' },
         { key: 'assistant-operations', label: 'Assistant Operations', icon: 'hospital-user' },
         { key: 'consumption-billing', label: 'Consumption & Billing', icon: 'file-invoice' },
         { key: 'payment-collection', label: 'Payment Collection', icon: 'hand-holding-dollar' }

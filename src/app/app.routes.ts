@@ -84,6 +84,10 @@ export const routes: Routes = [
         loadComponent: () => import('./components/material-transfer/material-transfer.component').then(m => m.MaterialTransferComponent)
       },
       {
+        path: 'material-delivery',
+        loadComponent: () => import('./components/material-delivery/material-delivery.component').then(m => m.MaterialDeliveryComponent)
+      },
+      {
         path: 'assistant-operations',
         loadComponent: () => import('./components/assistant-operations/assistant-operations.component').then(m => m.AssistantOperationsComponent)
       },
