@@ -75,10 +75,22 @@ export class MaterialDeliveryComponent implements OnInit {
     this.loading = true;
     this.hasError = false;
 
-    this.materialTransferService.getMaterialDeliveries().subscribe({
+    const currentUser = this.authService.currentUser;
+    if (!currentUser) {
+      this.toastService.error('User not authenticated');
+      this.loading = false;
+      this.hasError = true;
+      return;
+    }
+
+    const deliveredById = currentUser.systemUserId || 0;
+
+    // Fetch deliveries filtered by the logged-in user
+    // Initially fetch 'Assigned' deliveries
+    this.materialTransferService.getMaterialDeliveries(this.selectedStatus, deliveredById).subscribe({
       next: (data) => {
-        // Filter out 'Pending' deliveries - only show 'Assigned' and 'Delivered'
-        this.deliveries = data.filter(d => d.deliveryStatus !== 'Pending');
+        // Data is already filtered by backend, no need for additional filtering
+        this.deliveries = data;
         this.applyFilters();
         this.loading = false;
         this.hasError = false;
@@ -95,10 +107,7 @@ export class MaterialDeliveryComponent implements OnInit {
   applyFilters(): void {
     let filtered = [...this.deliveries];
 
-    // Apply status filter - always filter by selected status
-    filtered = filtered.filter(d => d.deliveryStatus === this.selectedStatus);
-
-    // Apply search filter
+    // Apply search filter (status filtering is now handled by backend)
     if (this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase();
       filtered = filtered.filter(d => 
@@ -116,7 +125,8 @@ export class MaterialDeliveryComponent implements OnInit {
   }
 
   onStatusChange(): void {
-    this.applyFilters();
+    // Refetch data from backend with new status filter
+    this.fetchData();
   }
 
   clearFilters(): void {

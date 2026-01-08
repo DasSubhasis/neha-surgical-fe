@@ -259,9 +259,26 @@ export class MaterialTransferService {
 
   /**
    * Get all material deliveries
+   * @param deliveryStatus Optional filter by delivery status (e.g., 'Assigned', 'Delivered')
+   * @param deliveredById Optional filter by delivered by user ID
    */
-  getMaterialDeliveries(): Observable<MaterialDelivery[]> {
-    return this.apiService.get<any>(ENDPOINTS.MATERIAL_DELIVERIES.LIST).pipe(
+  getMaterialDeliveries(deliveryStatus?: string, deliveredById?: number): Observable<MaterialDelivery[]> {
+    let url = ENDPOINTS.MATERIAL_DELIVERIES.LIST;
+    const params: string[] = [];
+    
+    if (deliveryStatus) {
+      params.push(`deliveryStatus=${deliveryStatus}`);
+    }
+    
+    if (deliveredById) {
+      params.push(`deliveredById=${deliveredById}`);
+    }
+    
+    if (params.length > 0) {
+      url += `?${params.join('&')}`;
+    }
+    
+    return this.apiService.get<any>(url).pipe(
       map(response => {
         console.log('Material deliveries response:', response);
         // Handle both wrapped responses and direct data
