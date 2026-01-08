@@ -12,6 +12,7 @@ import {
   TimelineEntry,
   OrderDetail
 } from '../../services/assistant-operations.service';
+import { SubAssistantAssignmentService, SubAssistantAssignment, SubAssistantAssignmentFormData } from '../../services/sub-assistant-assignment.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
@@ -69,6 +70,17 @@ export class AssistantOperationsComponent implements OnInit {
   inOperationCount: number = 0;
   completedCount: number = 0;
   
+  // Sub-Assistant Assignment
+  isSubAssignModalOpen = false;
+  selectedOrderForSubAssign: AssistantOrder | null = null;
+  subAssignments: SubAssistantAssignment[] = [];
+  subAssignForm: SubAssistantAssignmentFormData = {
+    assignmentId: 0,
+    orderId: 0,
+    subAssistantId: 0
+  };
+  isLoadingSubAssignments = false;
+  
   // Loading states
   isLoading = false;
   isRefreshing = false;
@@ -98,6 +110,7 @@ export class AssistantOperationsComponent implements OnInit {
 
   constructor(
     private assistantOpsService: AssistantOperationsService,
+    private subAssistantService: SubAssistantAssignmentService,
     private toastService: ToastService,
     private router: Router,
     private cdr: ChangeDetectorRef,
@@ -649,4 +662,141 @@ export class AssistantOperationsComponent implements OnInit {
   getCurrentTimestamp(): string {
     return this.formatDateTime(new Date().toISOString(), 'YYYY-MM-DD HH:mm:ss');
   }
+
+  // ============ Sub-Assistant Assignment Methods ============
+  
+  // Open sub-assistant assignment modal
+  openSubAssignModal(order: AssistantOrder): void {
+    this.selectedOrderForSubAssign = order;
+    this.isSubAssignModalOpen = true;
+    
+    // Reset form
+    this.subAssignForm = {
+      assignmentId: 0, // Will be set from API response if needed
+      orderId: order.id,
+      subAssistantId: 0
+    };
+    
+    // Load existing sub-assignments for this order
+    this.loadSubAssignments(order.id);
+  }
+
+  // Close sub-assistant modal
+  closeSubAssignModal(): void {
+    this.isSubAssignModalOpen = false;
+    this.selectedOrderForSubAssign = null;
+    this.subAssignments = [];
+    this.subAssignForm = {
+      assignmentId: 0,
+      orderId: 0,
+      subAssistantId: 0
+    };
+  }
+
+  // Load sub-assignments for an order
+  loadSubAssignments(orderId: number): void {
+    this.isLoadingSubAssignments = true;
+    this.subAssistantService.getSubAssistantAssignments(orderId).subscribe({
+      next: (assignments) => {
+        console.log('Sub-assignments loaded:', assignments);
+        this.subAssignments = assignments;
+        this.isLoadingSubAssignments = false;
+        
+        // Set assignmentId if we have assignments
+        if (assignments.length > 0) {
+          this.subAssignForm.assignmentId = assignments[0].assignmentId;
+        }
+      },
+      error: (error) => {
+        console.error('Error loading sub-assignments:', error);
+        this.toastService.error(error.message || 'Failed to load sub-assistants');
+        this.isLoadingSubAssignments = false;
+      }
+    });
+  }
+
+  // Assign sub-assistant
+  assignSubAssistant(): void {
+    if (!this.subAssignForm.subAssistantId) {
+      this.toastService.error('Please select a sub-assistant');
+      return;
+    }
+
+    // Prevent assigning the same person as both main and sub-assistant
+    if (this.selectedOrderForSubAssign?.assignedAssistantId === this.subAssignForm.subAssistantId) {
+      this.toastService.error('Cannot assign the main assistant as a sub-assistant');
+      return;
+    }
+
+    // Check for duplicate sub-assistant assignments
+    const isDuplicate = this.subAssignments.some(
+      sa => sa.subAssistantId === this.subAssignForm.subAssistantId
+    );
+    if (isDuplicate) {
+      this.toastService.error('This assistant is already assigned to this order');
+      return;
+    }
+
+    this.isSaving = true;
+    
+    // If we don't have assignmentId yet, we need to get it
+    // For now, we'll send 0 and let the backend handle it
+    const formData: SubAssistantAssignmentFormData = {
+      ...this.subAssignForm,
+      assignmentId: this.subAssignForm.assignmentId || 0
+    };
+
+    this.subAssistantService.assignSubAssistant(formData).subscribe({
+      next: (response) => {
+        console.log('Sub-assistant assigned:', response);
+        this.toastService.success('Sub-assistant assigned successfully');
+        
+        // Reload sub-assignments
+        this.loadSubAssignments(this.subAssignForm.orderId);
+        
+        // Reset sub-assistant selection
+        this.subAssignForm.subAssistantId = 0;
+        this.isSaving = false;
+      },
+      error: (error) => {
+        console.error('Error assigning sub-assistant:', error);
+        this.toastService.error(error.message || 'Failed to assign sub-assistant');
+        this.isSaving = false;
+      }
+    });
+  }
+
+  // Unassign sub-assistant
+  unassignSubAssistant(subAssignment: SubAssistantAssignment): void {
+    if (!confirm(`Are you sure you want to remove ${subAssignment.subAssistantName} from this order?`)) {
+      return;
+    }
+
+    this.subAssistantService.unassignSubAssistant(subAssignment.subAssignmentId).subscribe({
+      next: (response) => {
+        console.log('Sub-assistant unassigned:', response);
+        this.toastService.success('Sub-assistant removed successfully');
+        
+        // Reload sub-assignments
+        this.loadSubAssignments(subAssignment.orderId);
+      },
+      error: (error) => {
+        console.error('Error unassigning sub-assistant:', error);
+        this.toastService.error(error.message || 'Failed to remove sub-assistant');
+      }
+    });
+  }
+
+  // Get available assistants for sub-assignment (exclude main assistant)
+  get availableSubAssistants(): Assistant[] {
+    if (!this.selectedOrderForSubAssign) {
+      return this.assistants;
+    }
+    
+    // Exclude the main assistant from the list
+    return this.assistants.filter(
+      assistant => assistant.id !== this.selectedOrderForSubAssign?.assignedAssistantId
+    );
+  }
 }
+

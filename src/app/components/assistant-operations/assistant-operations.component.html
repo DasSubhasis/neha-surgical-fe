@@ -158,7 +158,7 @@
           <div class="flex gap-2 pt-3 border-t border-gray-100">
             <button
               (click)="viewOrderDetails(order)"
-              class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors duration-200"
+              class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors duration-200 text-sm"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -169,12 +169,24 @@
             
             <button
               (click)="viewProcessHistory(order)"
-              class="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors duration-200"
+              class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors duration-200 text-sm"
             >
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
               Process
+            </button>
+            
+            <!-- Assign Others button - only for Assigned and In Operation tabs -->
+            <button
+              *ngIf="activeTab === 'Assigned' || activeTab === 'In Operation'"
+              (click)="openSubAssignModal(order)"
+              class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors duration-200 text-sm"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              Assign Others
             </button>
           </div>
         </div>
@@ -836,6 +848,144 @@
           Apply Filters
         </button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Sub-Assistant Assignment Modal -->
+<div *ngIf="isSubAssignModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center p-2">
+  <div class="relative w-full max-w-2xl bg-white rounded-lg shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-green-600 to-green-700 px-6 py-4 flex-shrink-0 flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-semibold text-white">Assign Others</h3>
+          <p class="text-xs text-green-100" *ngIf="selectedOrderForSubAssign">
+            Order: {{ selectedOrderForSubAssign.orderNo }} - {{ selectedOrderForSubAssign.hospitalName }}
+          </p>
+        </div>
+      </div>
+      <button (click)="closeSubAssignModal()" class="text-white hover:text-gray-200">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-6 flex-1 overflow-y-auto">
+      <!-- Assign New Sub-Assistant Section -->
+      <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+        <h4 class="text-sm font-semibold text-green-900 mb-3 flex items-center gap-2">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Assign New Sub-Assistant
+        </h4>
+        
+        <div class="flex gap-2">
+          <select
+            [(ngModel)]="subAssignForm.subAssistantId"
+            class="flex-1 px-3 py-2 border border-green-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white text-sm"
+          >
+            <option value="0" disabled>Select sub-assistant...</option>
+            <option *ngFor="let assistant of availableSubAssistants" [value]="assistant.id">
+              {{ assistant.name }}
+            </option>
+          </select>
+          
+          <button
+            (click)="assignSubAssistant()"
+            [disabled]="isSaving || !subAssignForm.subAssistantId"
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-sm font-medium"
+          >
+            <svg *ngIf="isSaving" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span *ngIf="!isSaving">Assign</span>
+            <span *ngIf="isSaving">Assigning...</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Assigned Sub-Assistants List -->
+      <div class="bg-white border border-gray-200 rounded-lg">
+        <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <h4 class="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Assigned Sub-Assistants
+            <span class="ml-auto text-xs font-normal text-gray-500">{{ subAssignments.length }} assigned</span>
+          </h4>
+        </div>
+
+        <div class="p-4">
+          <!-- Loading State -->
+          <div *ngIf="isLoadingSubAssignments" class="flex items-center justify-center py-8">
+            <svg class="animate-spin h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+
+          <!-- Empty State -->
+          <div *ngIf="!isLoadingSubAssignments && subAssignments.length === 0" class="text-center py-8">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            <p class="mt-2 text-sm text-gray-500">No sub-assistants assigned yet</p>
+          </div>
+
+          <!-- Sub-Assistants List -->
+          <div *ngIf="!isLoadingSubAssignments && subAssignments.length > 0" class="space-y-2">
+            <div
+              *ngFor="let subAssignment of subAssignments"
+              class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 hover:border-green-300 transition-colors"
+            >
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-gray-900">{{ subAssignment.subAssistantName }}</p>
+                  <p class="text-xs text-gray-500">
+                    Assigned on {{ formatDateTime(subAssignment.assignedAt, 'DD MMM YYYY') }}
+                  </p>
+                </div>
+              </div>
+              
+              <button
+                (click)="unassignSubAssistant(subAssignment)"
+                class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Remove sub-assistant"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="bg-gray-50 px-6 py-4 flex justify-end border-t border-gray-200 flex-shrink-0">
+      <button
+        (click)="closeSubAssignModal()"
+        class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+      >
+        Close
+      </button>
     </div>
   </div>
 </div>

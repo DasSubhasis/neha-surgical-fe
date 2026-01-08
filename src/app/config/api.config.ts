@@ -116,6 +116,14 @@ export const ENDPOINTS = {
     UNASSIGN: (orderId: number) => `/AssistantAssignments/${orderId}`,
   },
 
+  // Sub-Assistant Assignment Management
+  SUB_ASSISTANT_ASSIGNMENTS: {
+    BASE: '/SubAssistantAssignments',
+    GET: (id: number) => `/SubAssistantAssignments/${id}`,
+    CREATE: '/SubAssistantAssignments',
+    DELETE: (id: number) => `/SubAssistantAssignments/${id}`,
+  },
+
   // Item Management
   ITEMS: {
     BASE: '/Items',
