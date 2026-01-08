@@ -7,7 +7,7 @@ export interface BreadcrumbItem {
 // Page hierarchy mapping
 const pageHierarchy: { [key: string]: { parent: string | null; label: string } } = {
   'dashboard': { parent: null, label: 'Home' },
-  
+
   // Master Data
   'master-data': { parent: 'dashboard', label: 'Master Data' },
   'item': { parent: 'master-data', label: 'Items' },
@@ -21,35 +21,35 @@ const pageHierarchy: { [key: string]: { parent: string | null; label: string } }
   'user': { parent: 'master-data', label: 'User' },
   'menu': { parent: 'master-data', label: 'Menu' },
   'role': { parent: 'master-data', label: 'Role' },
-  
+
   // Order Collection
-  'order': { parent: 'dashboard', label: 'Order Collection' },
+  'order': { parent: 'dashboard', label: 'Transaction' },
   'order-entry': { parent: 'order', label: 'Order Entry' },
   'order-reminder': { parent: 'order', label: 'Upcoming Orders' },
-  
+
   // Order Assignment
-  'assignment': { parent: 'dashboard', label: 'Order Assignment' },
+  'assignment': { parent: 'dashboard', label: 'Transaction' },
   'assistant-assignment': { parent: 'assignment', label: 'Assistant Assignment' },
-  
+
   // Material Movement
-  'transfer': { parent: 'dashboard', label: 'Material Movement' },
+  'transfer': { parent: 'dashboard', label: 'Transaction' },
   'material-transfer': { parent: 'transfer', label: 'Material Transfer' },
-  
+
   // Assistant Operations
-  'operations': { parent: 'dashboard', label: 'Assistant Operations' },
+  'operations': { parent: 'dashboard', label: 'Transaction' },
   'assistant-operations': { parent: 'operations', label: 'Assistant Operations' },
-  
+
   // Consumption & Billing
-  'billing': { parent: 'dashboard', label: 'Consumption & Billing' },
+  'billing': { parent: 'dashboard', label: 'Transaction' },
   'consumption-billing': { parent: 'billing', label: 'Consumption & Billing' },
-  
+
   // Payment Collection
-  'payment': { parent: 'dashboard', label: 'Payment Collection' },
+  'payment': { parent: 'dashboard', label: 'Transaction' },
   'payment-collection': { parent: 'payment', label: 'Payment Collection' },
-  
+
   // Reports
   'reports': { parent: 'dashboard', label: 'Reports' },
-  
+
   // Profile
   'profile': { parent: 'dashboard', label: 'Profile' }
 };

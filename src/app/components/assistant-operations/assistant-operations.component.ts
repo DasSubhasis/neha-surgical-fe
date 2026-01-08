@@ -9,9 +9,11 @@ import {
   CheckInOutFormData, 
   AssignAssistantFormData,
   Coordinates,
-  TimelineEntry 
+  TimelineEntry,
+  OrderDetail
 } from '../../services/assistant-operations.service';
 import { ToastService } from '../../services/toast.service';
+import { AuthService } from '../../services/auth.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent } from '../action-dropdown/action-dropdown.component';
 
@@ -35,16 +37,23 @@ export class AssistantOperationsComponent implements OnInit {
   // UI States
   selectedOrderRow: AssistantOrder | null = null;
   isCheckModalOpen = false;
-  checkForm: CheckInOutFormData & { coords: Coordinates | null } = {
+  gpsAccuracy: number | null = null;
+  checkForm: CheckInOutFormData & { coords: Coordinates | null; locationAddress?: string } = {
     orderId: 0,
     type: 'checkin',
     comments: '',
     coords: null,
+    locationAddress: undefined,
     timestamp: new Date().toISOString()
   };
   
   viewRow: AssistantOrder | null = null;
+  fullOrderDetails: OrderDetail | null = null;
+  isViewModalOpen = false;
+  isProcessModalOpen = false;
+  processOrderRow: AssistantOrder | null = null;
   isAssignModalOpen = false;
+  isFilterModalOpen = false;
   assignForm: AssignAssistantFormData = {
     orderId: 0,
     assistantId: 0,
@@ -52,7 +61,13 @@ export class AssistantOperationsComponent implements OnInit {
   };
   
   searchTerm = '';
-  filterStatus: 'all' | 'Scheduled' | 'In Operation' | 'Completed (Pre-Billing)' = 'all';
+  filterStatus: 'Assigned' | 'In Operation' | 'Completed (Pre-Billing)' = 'Assigned';
+  activeTab: 'Assigned' | 'In Operation' | 'Completed (Pre-Billing)' = 'Assigned';
+  
+  // Tab counts
+  assignedCount: number = 0;
+  inOperationCount: number = 0;
+  completedCount: number = 0;
   
   // Loading states
   isLoading = false;
@@ -69,11 +84,13 @@ export class AssistantOperationsComponent implements OnInit {
   actionItems = [
     [
       {
+        label: 'Filter',
+        icon: 'filter',
+        onClick: () => this.openFilterModal()
+      },
+      {
         label: 'Refresh',
-        icon: `<svg class="text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>`,
+        icon: 'refresh',
         onClick: () => this.refreshData()
       }
     ]
@@ -83,18 +100,35 @@ export class AssistantOperationsComponent implements OnInit {
     private assistantOpsService: AssistantOperationsService,
     private toastService: ToastService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
     this.loadData();
   }
 
+  // Switch between tabs
+  switchTab(tab: 'Assigned' | 'In Operation' | 'Completed (Pre-Billing)'): void {
+    this.activeTab = tab;
+    this.filterStatus = tab;
+    this.loadData();
+  }
+
   loadData(): void {
     this.isLoading = true;
     
-    // Load orders and assistants
-    this.assistantOpsService.getOrders().subscribe({
+    const currentUser = this.authService.currentUser;
+    if (!currentUser) {
+      this.toastService.error('User not authenticated');
+      this.isLoading = false;
+      return;
+    }
+
+    const assignedId = currentUser.systemUserId || 0;
+    
+    // Load orders filtered by status and assignedId
+    this.assistantOpsService.getOrders(this.filterStatus, assignedId).subscribe({
       next: (orders) => {
         this.orders = orders;
         this.isLoading = false;
@@ -104,6 +138,34 @@ export class AssistantOperationsComponent implements OnInit {
         console.error('Error loading orders:', error);
         this.toastService.error('Failed to load orders');
         this.isLoading = false;
+      }
+    });
+
+    // Load counts for all tabs
+    this.assistantOpsService.getOrders('Assigned', assignedId).subscribe({
+      next: (orders) => {
+        this.assignedCount = orders.length;
+      },
+      error: (error) => {
+        console.error('Error loading assigned count:', error);
+      }
+    });
+
+    this.assistantOpsService.getOrders('In Operation', assignedId).subscribe({
+      next: (orders) => {
+        this.inOperationCount = orders.length;
+      },
+      error: (error) => {
+        console.error('Error loading in-operation count:', error);
+      }
+    });
+
+    this.assistantOpsService.getOrders('Completed (Pre-Billing)', assignedId).subscribe({
+      next: (orders) => {
+        this.completedCount = orders.length;
+      },
+      error: (error) => {
+        console.error('Error loading completed count:', error);
       }
     });
 
@@ -131,18 +193,52 @@ export class AssistantOperationsComponent implements OnInit {
     }
   }
 
-  // Filtered orders based on search and status
+  // Filtered orders based on search (status filtering is handled by API)
   get filteredOrders(): AssistantOrder[] {
+    if (!this.searchTerm.trim()) {
+      return this.orders;
+    }
+    
     return this.orders.filter(order => {
       const matchesSearch =
         order.orderNo.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         order.hospitalName.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
         order.doctorName.toLowerCase().includes(this.searchTerm.toLowerCase());
 
-      const matchesStatus = this.filterStatus === 'all' || order.status === this.filterStatus;
-
-      return matchesSearch && matchesStatus;
+      return matchesSearch;
     });
+  }
+
+  // Handle status filter change - refetch data from API
+  onStatusFilterChange(): void {
+    this.loadData();
+  }
+
+  // Filter Modal Methods
+  openFilterModal(): void {
+    this.isFilterModalOpen = true;
+  }
+
+  closeFilterModal(): void {
+    this.isFilterModalOpen = false;
+  }
+
+  applyAndCloseFilter(): void {
+    this.loadData();
+    this.closeFilterModal();
+  }
+
+  clearFilters(): void {
+    this.searchTerm = '';
+    this.filterStatus = 'Assigned';
+    this.loadData();
+  }
+
+  get activeFilterCount(): number {
+    let count = 0;
+    if (this.searchTerm.trim()) count++;
+    if (this.filterStatus !== 'Assigned') count++;
+    return count;
   }
 
   // Get assistant name by ID
@@ -153,8 +249,9 @@ export class AssistantOperationsComponent implements OnInit {
   }
 
   // Open check-in/out modal
-  openCheckModal(order: AssistantOrder, type: 'checkin' | 'checkout'): void {
+  async openCheckModal(order: AssistantOrder, type: 'checkin' | 'checkout'): Promise<void> {
     this.selectedOrderRow = order;
+    this.gpsAccuracy = null;
     this.checkForm = {
       orderId: order.id,
       type,
@@ -163,6 +260,125 @@ export class AssistantOperationsComponent implements OnInit {
       timestamp: new Date().toISOString()
     };
     this.isCheckModalOpen = true;
+    
+    // Capture GPS coordinates immediately when modal opens
+    try {
+      const position = await this.getHighAccuracyPosition();
+      if (position) {
+        this.checkForm.coords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        this.gpsAccuracy = position.coords.accuracy;
+        console.log('GPS captured with accuracy:', this.gpsAccuracy, 'meters');
+        
+        // Fetch address from coordinates
+        this.checkForm.locationAddress = 'Fetching address...';
+        this.cdr.detectChanges();
+        
+        const address = await this.reverseGeocode(
+          position.coords.latitude,
+          position.coords.longitude
+        );
+        this.checkForm.locationAddress = address;
+      }
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.warn('Failed to capture GPS:', error);
+      this.toastService.warning('GPS location could not be captured');
+    }
+  }
+
+  // Reverse geocode coordinates to get address
+  private async reverseGeocode(lat: number, lng: number): Promise<string> {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'NehasurgicalApp/1.0' // Required by Nominatim
+          }
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Geocoding failed');
+      }
+      
+      const data = await response.json();
+      return data.display_name || 'Address not found';
+    } catch (error) {
+      console.error('Reverse geocoding error:', error);
+      return 'Address unavailable';
+    }
+  }
+
+  // Get high accuracy GPS position
+  private getHighAccuracyPosition(): Promise<GeolocationPosition | null> {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject('Geolocation not supported');
+        return;
+      }
+
+      const options: PositionOptions = {
+        enableHighAccuracy: true,  // Force GPS usage
+        timeout: 15000,            // 15 seconds timeout
+        maximumAge: 0              // No cached data
+      };
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => resolve(position),
+        (error) => {
+          console.error('GPS Error:', error.message);
+          resolve(null);
+        },
+        options
+      );
+    });
+  }
+
+  // Retry GPS capture for better accuracy
+  async retryGPSCapture(): Promise<void> {
+    this.gpsAccuracy = null;
+    this.checkForm.coords = null;
+    this.checkForm.locationAddress = undefined;
+    this.cdr.detectChanges();
+    
+    this.toastService.info('Recapturing GPS location...');
+    
+    try {
+      const position = await this.getHighAccuracyPosition();
+      if (position) {
+        this.checkForm.coords = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        this.gpsAccuracy = position.coords.accuracy;
+        
+        // Fetch address from coordinates
+        this.checkForm.locationAddress = 'Fetching address...';
+        this.cdr.detectChanges();
+        
+        const address = await this.reverseGeocode(
+          position.coords.latitude,
+          position.coords.longitude
+        );
+        this.checkForm.locationAddress = address;
+        
+        if (this.gpsAccuracy && this.gpsAccuracy <= 50) {
+          this.toastService.success('GPS captured with good accuracy');
+        } else {
+          this.toastService.warning('GPS accuracy is still poor. Ensure GPS is enabled and you are outdoors.');
+        }
+      } else {
+        this.toastService.error('Failed to capture GPS location');
+      }
+      this.cdr.detectChanges();
+    } catch (error) {
+      console.error('GPS retry failed:', error);
+      this.toastService.error('GPS capture failed');
+    }
   }
 
   // Save check-in/out
@@ -177,19 +393,27 @@ export class AssistantOperationsComponent implements OnInit {
       return;
     }
 
+    // Get current user's assistant ID
+    const currentUser = this.authService.currentUser;
+    if (!currentUser || !currentUser.systemUserId) {
+      this.toastService.error('User not authenticated');
+      return;
+    }
+
     this.isSaving = true;
 
     try {
-      // Capture GPS coordinates
-      const coords = await this.assistantOpsService.captureCoordinates();
-      this.checkForm.coords = coords;
+      // Update timestamp to current time
       this.checkForm.timestamp = new Date().toISOString();
 
-      // Record check-in/out
-      this.assistantOpsService.recordCheckInOut(this.checkForm).subscribe({
+      // Record check-in/out with assistantId and location address
+      this.assistantOpsService.recordCheckInOut(
+        this.checkForm, 
+        currentUser.systemUserId,
+        this.checkForm.locationAddress
+      ).subscribe({
         next: (response) => {
-          // Update local order
-          this.updateOrderAfterCheck(this.checkForm);
+          console.log('Check-in/out response:', response);
           
           const message = this.checkForm.type === 'checkin' 
             ? 'Checked in successfully' 
@@ -199,6 +423,16 @@ export class AssistantOperationsComponent implements OnInit {
           this.isCheckModalOpen = false;
           this.selectedOrderRow = null;
           this.isSaving = false;
+          
+          // Close process modal after successful check-in/out
+          this.isProcessModalOpen = false;
+          this.processOrderRow = null;
+          
+          // Refresh data to update tabs and counts
+          this.loadData();
+          
+          // Force change detection
+          this.cdr.detectChanges();
         },
         error: (error) => {
           console.error('Check-in/out error:', error);
@@ -221,17 +455,25 @@ export class AssistantOperationsComponent implements OnInit {
         when: formData.timestamp,
         type: formData.type === 'checkin' ? 'Check In' : 'Check Out',
         comments: formData.comments,
-        coords: formData.coords
+        coords: formData.coords,
+        gpsLocation: this.checkForm.locationAddress || null
       };
 
-      return {
+      const updatedOrder = {
         ...order,
         timeline: [...order.timeline, newTimelineEntry],
         visited: formData.type === 'checkin' ? true : order.visited,
         status: formData.type === 'checkin' 
-          ? 'In Operation' 
-          : 'Completed (Pre-Billing)'
+          ? 'In Operation' as const
+          : 'Completed (Pre-Billing)' as const
       };
+
+      // Also update processOrderRow if it's the same order
+      if (this.processOrderRow && this.processOrderRow.id === formData.orderId) {
+        this.processOrderRow = updatedOrder;
+      }
+
+      return updatedOrder;
     });
   }
 
@@ -292,11 +534,63 @@ export class AssistantOperationsComponent implements OnInit {
   // View order details
   viewOrderDetails(order: AssistantOrder): void {
     this.viewRow = order;
+    this.fullOrderDetails = null;
+    this.isViewModalOpen = true;
+    
+    // Fetch full order details from API
+    this.assistantOpsService.getOrderDetails(order.id).subscribe({
+      next: (details) => {
+        this.fullOrderDetails = details;
+      },
+      error: (error) => {
+        console.error('Error fetching order details:', error);
+        this.toastService.error('Failed to load order details');
+      }
+    });
+  }
+
+  // Show process history (check-in/check-out)
+  viewProcessHistory(order: AssistantOrder): void {
+    console.log('Opening process modal for order:', order);
+    console.log('Order status:', order.status);
+    this.processOrderRow = { ...order }; // Create a copy to avoid reference issues
+    this.isProcessModalOpen = true;
+    
+    // Fetch operation history from API
+    const currentUser = this.authService.currentUser;
+    if (currentUser && currentUser.systemUserId) {
+      this.assistantOpsService.getOperationHistory(order.id, currentUser.systemUserId).subscribe({
+        next: (timeline) => {
+          // Update the processOrderRow with fetched timeline while preserving status
+          if (this.processOrderRow) {
+            this.processOrderRow = {
+              ...this.processOrderRow,
+              timeline: timeline
+            };
+            console.log('Updated processOrderRow:', this.processOrderRow);
+            console.log('Updated status:', this.processOrderRow.status);
+            this.cdr.detectChanges();
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching operation history:', error);
+          this.toastService.error('Failed to load operation history');
+        }
+      });
+    }
   }
 
   // Close view modal
   closeViewModal(): void {
     this.viewRow = null;
+    this.fullOrderDetails = null;
+    this.isViewModalOpen = false;
+  }
+
+  // Close process modal
+  closeProcessModal(): void {
+    this.processOrderRow = null;
+    this.isProcessModalOpen = false;
   }
 
   // Get unique timeline entries by type
