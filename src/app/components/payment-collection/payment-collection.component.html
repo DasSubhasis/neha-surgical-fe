@@ -1,0 +1,280 @@
+<div class="p-2 md:p-2 h-full flex flex-col">
+  <!-- Header Row with Breadcrumb and Actions -->
+  <div class="flex flex-row justify-between items-center mb-2 md:mb-3 gap-2 min-h-0">
+    <div class="flex items-center">
+      <app-breadcrumb
+        [currentPage]="'payment-collection'"
+        (navigate)="onBreadcrumbNavigate($event)"
+      ></app-breadcrumb>
+    </div>
+    <div class="flex items-center">
+      <app-action-dropdown [actions]="actionItems"></app-action-dropdown>
+    </div>
+  </div>
+
+  <!-- AG Grid Container -->
+  <div class="flex-1 min-h-0 relative">
+    <!-- Loading Overlay -->
+    <div *ngIf="isLoading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+      <div class="flex flex-col items-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p class="mt-3 text-sm text-gray-600">Loading payment collections...</p>
+      </div>
+    </div>
+
+    <!-- AG Grid -->
+    <ag-grid-angular
+      class="ag-theme-alpine h-full w-full"
+      [columnDefs]="columnDefs"
+      [rowData]="payments"
+      [defaultColDef]="defaultColDef"
+      [pagination]="true"
+      [paginationPageSize]="20"
+      [rowHeight]="48"
+      [headerHeight]="40"
+      [animateRows]="true"
+      [suppressCellFocus]="true"
+      (gridReady)="onGridReady($event)"
+    ></ag-grid-angular>
+  </div>
+
+  <!-- ============ Create/Edit Modal ============ -->
+  <div *ngIf="isModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-30 z-50 flex items-center justify-center p-2">
+    <div class="relative w-full h-full bg-white rounded-none shadow-xl overflow-hidden flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 bg-white bg-opacity-20 rounded-lg flex items-center justify-center">
+              <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-white leading-6">{{ editingPayment ? 'Edit' : 'Record' }} Payment Collection</h3>
+            </div>
+          </div>
+          <button (click)="closeModal()" class="text-white hover:text-gray-200 transition">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-6 space-y-4 overflow-y-auto flex-1">
+        <!-- Receipt No -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Receipt No <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            [(ngModel)]="form.receiptNo"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            placeholder="Auto-generated"
+          />
+        </div>
+
+        <!-- Collection Date, Doctor, Hospital -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Collection Date <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              [(ngModel)]="form.collectionDate"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Doctor <span class="text-red-500">*</span>
+            </label>
+            <select
+              [(ngModel)]="form.doctorId"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            >
+              <option [value]="null">Select Doctor</option>
+              <option *ngFor="let doctor of doctors" [value]="doctor.id">{{ doctor.name }}</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Hospital <span class="text-red-500">*</span>
+            </label>
+            <select
+              [(ngModel)]="form.hospitalId"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            >
+              <option [value]="null">Select Hospital</option>
+              <option *ngFor="let hospital of hospitals" [value]="hospital.id">{{ hospital.name }}</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Amount and Collected By -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Amount (₹) <span class="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              [(ngModel)]="form.amount"
+              min="0"
+              step="0.01"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+              placeholder="0.00"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">
+              Collected By <span class="text-red-500">*</span>
+            </label>
+            <select
+              [(ngModel)]="form.collectedById"
+              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
+            >
+              <option [value]="0">Select User</option>
+              <option *ngFor="let user of users" [value]="user.id">
+                {{ user.name }} {{ user.id === currentUser?.id ? '(You)' : '' }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Remarks -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Remarks <span class="text-xs text-gray-500">({{ form.remarks.length || 0 }}/250)</span>
+          </label>
+          <textarea
+            [(ngModel)]="form.remarks"
+            maxlength="250"
+            rows="3"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200 resize-none"
+            placeholder="Details of payment (e.g., mode, notes)"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 px-6 py-4 flex justify-end space-x-3 flex-shrink-0">
+        <button
+          (click)="closeModal()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Cancel
+        </button>
+        <button
+          (click)="handleSave()"
+          class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+        >
+          {{ editingPayment ? 'Update' : 'Record Payment' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ View Details Modal ============ -->
+  <div *ngIf="isViewModalOpen && viewRow" class="fixed inset-0 bg-gray-900 bg-opacity-30 z-50 flex items-center justify-center p-2">
+    <div class="relative w-full h-full bg-white rounded-none shadow-xl overflow-hidden flex flex-col">
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0 flex justify-between items-center">
+        <h3 class="text-lg font-semibold text-white">Payment Details</h3>
+        <button (click)="closeViewModal()" class="text-white hover:text-gray-200 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 flex-1 overflow-y-auto">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Receipt No</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewRow.receiptNo }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Collection Date</div>
+            <div class="text-sm font-normal text-gray-800">{{ formatDate(viewRow.collectionDate) }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Doctor</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewRow.doctorName }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Hospital</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewRow.hospitalName }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Amount</div>
+            <div class="text-lg font-semibold text-green-700">₹ {{ viewRow.amount.toLocaleString('en-IN') }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Collected By</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewRow.collectedByName }}</div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Status</div>
+            <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full" 
+                  [ngClass]="{
+                    'bg-green-100 text-green-800': viewRow.status === 'Completed',
+                    'bg-yellow-100 text-yellow-800': viewRow.status === 'Pending',
+                    'bg-gray-100 text-gray-800': viewRow.status !== 'Completed' && viewRow.status !== 'Pending'
+                  }">
+              {{ viewRow.status }}
+            </span>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Recorded On</div>
+            <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewRow.createdAt) }}</div>
+          </div>
+
+          <div *ngIf="viewRow.remarks" class="md:col-span-2">
+            <div class="text-xs font-bold text-indigo-800 mb-2">Remarks</div>
+            <div class="text-sm font-normal text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200">
+              {{ viewRow.remarks }}
+            </div>
+          </div>
+
+          <div *ngIf="viewRow.audits && viewRow.audits.length > 0" class="md:col-span-2">
+            <div class="text-xs font-bold text-indigo-800 mb-2">Audit Trail</div>
+            <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
+              <table class="w-full text-xs">
+                <thead class="bg-gray-100 text-gray-700 border-b">
+                  <tr>
+                    <th class="text-left py-2 px-3 font-medium">Action</th>
+                    <th class="text-left py-2 px-3 font-medium">By</th>
+                    <th class="text-left py-2 px-3 font-medium">When</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let audit of viewRow.audits" class="border-b last:border-b-0 hover:bg-gray-50">
+                    <td class="py-2 px-3">{{ audit.action }}</td>
+                    <td class="py-2 px-3 text-gray-600">{{ audit.by }}</td>
+                    <td class="py-2 px-3 text-gray-600">{{ formatDateTime(audit.when) }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="bg-gray-50 px-6 py-4 flex justify-end flex-shrink-0">
+        <button
+          (click)="closeViewModal()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

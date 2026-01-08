@@ -93,11 +93,11 @@ export const routes: Routes = [
       },
       {
         path: 'consumption-billing',
-        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/consumption-billing/consumption-billing.component').then(m => m.ConsumptionBillingComponent)
       },
       {
         path: 'payment-collection',
-        loadComponent: () => import('./shared/components/placeholder/placeholder.component').then(m => m.PlaceholderComponent)
+        loadComponent: () => import('./components/payment-collection/payment-collection.component').then(m => m.PaymentCollectionComponent)
       },
       {
         path: 'reports',

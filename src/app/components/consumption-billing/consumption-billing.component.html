@@ -1,0 +1,691 @@
+<div class="p-2 md:p-2 h-full flex flex-col">
+  <!-- Header Row with Breadcrumb and Actions -->
+  <div class="flex flex-row justify-between items-center mb-2 md:mb-3 gap-2 min-h-0">
+    <div class="flex items-center">
+      <app-breadcrumb
+        [currentPage]="'consumption-billing'"
+        (navigate)="onBreadcrumbNavigate($event)"
+      ></app-breadcrumb>
+    </div>
+    <div class="flex items-center">
+      <app-action-dropdown [actions]="actionItems"></app-action-dropdown>
+    </div>
+  </div>
+
+  <!-- AG Grid Container -->
+  <div class="flex-1 min-h-0 relative">
+    <!-- Loading Overlay -->
+    <div *ngIf="isLoading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+      <div class="flex flex-col items-center">
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <p class="mt-3 text-sm text-gray-600">Loading orders...</p>
+      </div>
+    </div>
+
+    <!-- AG Grid -->
+    <ag-grid-angular
+      class="ag-theme-alpine h-full w-full"
+      [columnDefs]="columnDefs"
+      [rowData]="billableOrders"
+      [defaultColDef]="defaultColDef"
+      [pagination]="true"
+      [paginationPageSize]="20"
+      [rowHeight]="48"
+      [headerHeight]="40"
+      [animateRows]="true"
+      [suppressCellFocus]="true"
+      (gridReady)="onGridReady($event)"
+    ></ag-grid-angular>
+  </div>
+
+  <!-- ============ Consumption Entry Modal ============ -->
+  <div *ngIf="isConsumptionModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-start justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full mt-8 mb-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-xl font-semibold text-gray-900">Consumption Entry</h2>
+        <button (click)="closeConsumptionModal()" class="text-gray-400 hover:text-gray-600 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-4 max-h-[calc(100vh-250px)] overflow-y-auto">
+        <!-- Order Info -->
+        <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div class="grid grid-cols-3 gap-4 text-sm">
+            <div><span class="font-semibold text-gray-700">Order No:</span> <span class="text-gray-900">{{ selectedOrder?.orderNo }}</span></div>
+            <div><span class="font-semibold text-gray-700">Doctor:</span> <span class="text-gray-900">{{ selectedOrder?.doctorName }}</span></div>
+            <div><span class="font-semibold text-gray-700">Hospital:</span> <span class="text-gray-900">{{ selectedOrder?.hospitalName }}</span></div>
+            <div><span class="font-semibold text-gray-700">Op Date:</span> <span class="text-gray-900">{{ selectedOrder?.operationDate }}</span></div>
+            <div><span class="font-semibold text-gray-700">Op Time:</span> <span class="text-gray-900">{{ selectedOrder?.operationTime }}</span></div>
+            <div><span class="font-semibold text-gray-700">Patient:</span> <span class="text-gray-900">{{ selectedOrder?.patientName }}</span></div>
+          </div>
+        </div>
+
+        <!-- Item Groups Selection -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Select Item Groups <span class="text-red-500">*</span>
+          </label>
+          <div class="grid grid-cols-3 gap-3">
+            <label *ngFor="let grp of itemGroups" class="flex items-center space-x-2 p-3 border border-gray-300 rounded-md hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                [value]="grp.id"
+                [checked]="selectedItemGroups.includes(grp.id)"
+                (change)="handleItemGroupChange($event, grp.id)"
+                class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+              <span class="text-sm text-gray-900">{{ grp.name }}</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Add Manual Item -->
+        <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-300">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">Add Manual Item</h3>
+          <div class="grid grid-cols-12 gap-3">
+            <div class="col-span-5">
+              <input
+                type="text"
+                [(ngModel)]="manualConsName"
+                placeholder="Item Name"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div class="col-span-2">
+              <input
+                type="number"
+                [(ngModel)]="manualConsQty"
+                [min]="1"
+                placeholder="Qty"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div class="col-span-2">
+              <select
+                [(ngModel)]="manualConsUnit"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="pcs">pcs</option>
+                <option value="sets">sets</option>
+                <option value="units">units</option>
+                <option value="boxes">boxes</option>
+              </select>
+            </div>
+            <div class="col-span-3">
+              <button
+                (click)="addManualConsItem()"
+                class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition text-sm font-medium"
+              >
+                Add Item
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Consumption Items Table -->
+        <div class="mb-4 border border-gray-300 rounded-lg overflow-hidden">
+          <div class="bg-gray-100 grid grid-cols-12 gap-2 px-4 py-3 text-sm font-semibold text-gray-700 border-b border-gray-300">
+            <div class="col-span-5">Item Name</div>
+            <div class="col-span-1 text-center">Unit</div>
+            <div class="col-span-2 text-center">Qty Consumed</div>
+            <div class="col-span-3">Remarks</div>
+            <div class="col-span-1 text-center">Action</div>
+          </div>
+          <div *ngIf="consRows.length === 0" class="px-4 py-8 text-center text-gray-500 text-sm">
+            No items added. Select item groups or add manual items.
+          </div>
+          <div *ngFor="let row of consRows; let i = index" class="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-200 hover:bg-gray-50 items-center">
+            <div class="col-span-5 text-sm text-gray-900">
+              {{ row.name }}
+              <span *ngIf="row.manual" class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Manual</span>
+            </div>
+            <div class="col-span-1">
+              <select
+                [value]="row.unit"
+                (change)="updateConsUnit(i, $any($event.target).value)"
+                class="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="pcs">pcs</option>
+                <option value="sets">sets</option>
+                <option value="units">units</option>
+                <option value="boxes">boxes</option>
+              </select>
+            </div>
+            <div class="col-span-2">
+              <input
+                type="number"
+                [value]="row.qtyConsumed"
+                (input)="updateConsQty(i, $any($event.target).value)"
+                [min]="0"
+                class="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 text-center"
+              />
+            </div>
+            <div class="col-span-3">
+              <input
+                type="text"
+                [value]="row.remarks"
+                (input)="updateConsRemarks(i, $any($event.target).value)"
+                maxlength="250"
+                placeholder="Optional"
+                class="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div class="col-span-1 text-center">
+              <button
+                *ngIf="row.manual"
+                (click)="removeConsRow(i)"
+                class="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                title="Remove"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Photo Capture -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Attach Photos (Optional)
+          </label>
+          <input
+            type="file"
+            accept="image/*"
+            capture="environment"
+            (change)="handleCapture($event)"
+            class="block w-full text-sm text-gray-500
+              file:mr-4 file:py-2 file:px-4
+              file:rounded-md file:border-0
+              file:text-sm file:font-semibold
+              file:bg-indigo-50 file:text-indigo-700
+              hover:file:bg-indigo-100
+              cursor-pointer"
+          />
+          <div *ngIf="attachments.length > 0" class="mt-3 grid grid-cols-4 gap-3">
+            <div *ngFor="let att of attachments" class="relative group">
+              <img [src]="att.data" [alt]="att.name" class="w-full h-32 object-cover rounded-lg border border-gray-300"/>
+              <button
+                (click)="removeAttachment(att.id)"
+                class="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
+                title="Remove"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- No Consumption Checkbox -->
+        <div class="mb-4">
+          <label class="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              [(ngModel)]="noConsumption"
+              class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+            />
+            <span class="text-sm font-medium text-gray-700">Mark as No Consumption</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <button
+          (click)="closeConsumptionModal()"
+          class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          (click)="handleSaveConsumption()"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+        >
+          Save & Map to Billing
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Map to Billing Modal ============ -->
+  <div *ngIf="isMapToBillingModalOpen" class="fixed inset-0 z-[60] overflow-y-auto bg-gray-900 bg-opacity-50 flex items-start justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mt-8 mb-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-xl font-semibold text-gray-900">Map Consumption to Billing</h2>
+        <button (click)="closeMapToBillingModal()" class="text-gray-400 hover:text-gray-600 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-4 max-h-[calc(100vh-250px)] overflow-y-auto">
+        <p class="text-sm text-gray-600 mb-4">
+          Select which consumed items should be billed. You can modify billing items in the next step.
+        </p>
+
+        <!-- Consumption Items List -->
+        <div class="border border-gray-300 rounded-lg overflow-hidden">
+          <div class="bg-gray-100 grid grid-cols-12 gap-2 px-4 py-3 text-sm font-semibold text-gray-700 border-b border-gray-300">
+            <div class="col-span-1 text-center">
+              <input
+                type="checkbox"
+                [checked]="(selectedOrder?.consumptionRecords?.length ?? 0) > 0 && mappedConsumptionIds.size === (selectedOrder?.consumptionRecords?.length ?? 0)"
+                (change)="handleSelectAllConsumption($event)"
+                class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+            </div>
+            <div class="col-span-6">Item Name</div>
+            <div class="col-span-2 text-center">Unit</div>
+            <div class="col-span-3 text-center">Qty Consumed</div>
+          </div>
+          <div *ngIf="!selectedOrder?.consumptionRecords || selectedOrder?.consumptionRecords?.length === 0" class="px-4 py-8 text-center text-gray-500 text-sm">
+            No consumption items to map.
+          </div>
+          <div *ngFor="let consItem of selectedOrder?.consumptionRecords" class="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-200 hover:bg-gray-50 items-center">
+            <div class="col-span-1 text-center">
+              <input
+                type="checkbox"
+                [checked]="mappedConsumptionIds.has(consItem.id)"
+                (change)="toggleConsumptionMapping(consItem)"
+                class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+              />
+            </div>
+            <div class="col-span-6 text-sm text-gray-900">{{ consItem.name }}</div>
+            <div class="col-span-2 text-sm text-gray-700 text-center">{{ consItem.unit }}</div>
+            <div class="col-span-3 text-sm text-gray-900 text-center font-semibold">{{ consItem.qty }}</div>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p class="text-sm text-gray-700">
+            <span class="font-semibold">{{ mappedConsumptionIds.size }}</span> out of <span class="font-semibold">{{ selectedOrder?.consumptionRecords?.length || 0 }}</span> items selected for billing
+          </p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <button
+          (click)="closeMapToBillingModal()"
+          class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-medium"
+        >
+          Cancel
+        </button>
+        <button
+          (click)="handleSaveMapToBilling()"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+        >
+          Proceed to Billing
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Billing Items Modal ============ -->
+  <div *ngIf="isBillingModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-start justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full mt-8 mb-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-xl font-semibold text-gray-900">Billing Items</h2>
+        <button (click)="closeBillingModal()" class="text-gray-400 hover:text-gray-600 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-4 max-h-[calc(100vh-250px)] overflow-y-auto">
+        <!-- Order Info -->
+        <div class="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+          <div class="grid grid-cols-3 gap-4 text-sm">
+            <div><span class="font-semibold text-gray-700">Order No:</span> <span class="text-gray-900">{{ selectedOrder?.orderNo }}</span></div>
+            <div><span class="font-semibold text-gray-700">Doctor:</span> <span class="text-gray-900">{{ selectedOrder?.doctorName }}</span></div>
+            <div><span class="font-semibold text-gray-700">Hospital:</span> <span class="text-gray-900">{{ selectedOrder?.hospitalName }}</span></div>
+          </div>
+        </div>
+
+        <!-- Add Manual Billing Item -->
+        <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-300">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">Add Manual Billing Item</h3>
+          <div class="grid grid-cols-12 gap-3">
+            <div class="col-span-5">
+              <input
+                type="text"
+                [(ngModel)]="manualBillName"
+                placeholder="Item Name"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div class="col-span-2">
+              <input
+                type="number"
+                [(ngModel)]="manualBillQty"
+                [min]="1"
+                placeholder="Qty"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div class="col-span-2">
+              <input
+                type="number"
+                [(ngModel)]="manualBillRate"
+                [min]="0"
+                step="0.01"
+                placeholder="Rate"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+              />
+            </div>
+            <div class="col-span-3">
+              <button
+                (click)="addManualBillingItem()"
+                class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition text-sm font-medium"
+              >
+                Add Item
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Billing Items Table -->
+        <div class="mb-4 border border-gray-300 rounded-lg overflow-hidden">
+          <div class="bg-gray-100 grid grid-cols-12 gap-2 px-4 py-3 text-sm font-semibold text-gray-700 border-b border-gray-300">
+            <div class="col-span-5">Item Name</div>
+            <div class="col-span-1 text-center">Unit</div>
+            <div class="col-span-2 text-center">Qty</div>
+            <div class="col-span-2 text-center">Rate (₹)</div>
+            <div class="col-span-2 text-center">Amount (₹)</div>
+          </div>
+          <div *ngIf="billRows.length === 0" class="px-4 py-8 text-center text-gray-500 text-sm">
+            No billing items added.
+          </div>
+          <div *ngFor="let row of billRows; let i = index" class="grid grid-cols-12 gap-2 px-4 py-3 border-b border-gray-200 hover:bg-gray-50 items-center">
+            <div class="col-span-5 text-sm text-gray-900 flex items-center">
+              {{ row.name }}
+              <span *ngIf="row.fromConsumption" class="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded">From Consumption</span>
+              <span *ngIf="row.manual" class="ml-2 text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded">Manual</span>
+              <button
+                *ngIf="row.manual"
+                (click)="removeBillingItem(i)"
+                class="ml-2 text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded"
+                title="Remove"
+              >
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                </svg>
+              </button>
+            </div>
+            <div class="col-span-1 text-sm text-gray-700 text-center">{{ row.unit }}</div>
+            <div class="col-span-2">
+              <input
+                type="number"
+                [value]="row.qty"
+                (input)="updateBillQty(i, $any($event.target).value)"
+                [min]="0"
+                class="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 text-center"
+              />
+            </div>
+            <div class="col-span-2">
+              <input
+                type="number"
+                [value]="row.rate"
+                (input)="updateBillRate(i, $any($event.target).value)"
+                [min]="0"
+                step="0.01"
+                class="w-full px-3 py-1 border border-gray-300 rounded text-sm focus:ring-indigo-500 focus:border-indigo-500 text-center"
+              />
+            </div>
+            <div class="col-span-2 text-sm text-gray-900 text-center font-semibold">
+              {{ (row.amount || 0).toFixed(2) }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Billing Summary -->
+        <div class="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-300">
+          <div class="space-y-2">
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-700">Subtotal:</span>
+              <span class="font-semibold text-gray-900">₹ {{ billingSubtotal.toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-sm">
+              <span class="text-gray-700">GST (18%):</span>
+              <span class="font-semibold text-gray-900">₹ {{ billingGST.toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-base font-bold border-t border-gray-300 pt-2">
+              <span class="text-gray-900">Grand Total:</span>
+              <span class="text-indigo-600">₹ {{ billingGrandTotal.toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Remarks -->
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-2">Remarks (Optional)</label>
+          <textarea
+            [(ngModel)]="remarks"
+            rows="3"
+            placeholder="Add any additional remarks..."
+            class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-between px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <button
+          (click)="openPreview()"
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+        >
+          Preview Invoice
+        </button>
+        <div class="flex items-center space-x-3">
+          <button
+            (click)="closeBillingModal()"
+            class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            (click)="handleSaveBilling()"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
+          >
+            Finalize Billing
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Preview Modal ============ -->
+  <div *ngIf="isPreviewModalOpen" class="fixed inset-0 z-[70] overflow-y-auto bg-gray-900 bg-opacity-50 flex items-start justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mt-8 mb-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-xl font-semibold text-gray-900">Invoice Preview</h2>
+        <button (click)="closePreviewModal()" class="text-gray-400 hover:text-gray-600 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body - Invoice -->
+      <div class="px-6 py-4 max-h-[calc(100vh-250px)] overflow-y-auto bg-white" id="invoice-content">
+        <!-- Invoice Header -->
+        <div class="text-center mb-6 border-b border-gray-300 pb-4">
+          <h1 class="text-3xl font-bold text-gray-900">Neha Surgical</h1>
+          <p class="text-sm text-gray-600">Surgical Equipment & Implants</p>
+          <p class="text-sm text-gray-600">GSTIN: 29XXXXX1234X1Z5</p>
+        </div>
+
+        <!-- Invoice Info -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <h3 class="text-sm font-semibold text-gray-700 mb-2">Bill To:</h3>
+            <p class="text-sm text-gray-900 font-medium">{{ selectedOrder?.hospitalName }}</p>
+            <p class="text-sm text-gray-600">{{ selectedOrder?.hospitalAddress || 'Address not available' }}</p>
+          </div>
+          <div class="text-right">
+            <p class="text-sm text-gray-700"><span class="font-semibold">Invoice No:</span> INV-{{ selectedOrder?.orderNo }}</p>
+            <p class="text-sm text-gray-700"><span class="font-semibold">Invoice Date:</span> {{ getCurrentDate() }}</p>
+            <p class="text-sm text-gray-700"><span class="font-semibold">Order No:</span> {{ selectedOrder?.orderNo }}</p>
+            <p class="text-sm text-gray-700"><span class="font-semibold">Doctor:</span> {{ selectedOrder?.doctorName }}</p>
+          </div>
+        </div>
+
+        <!-- Billing Items Table -->
+        <table class="w-full mb-6 border border-gray-300">
+          <thead>
+            <tr class="bg-gray-100 border-b border-gray-300">
+              <th class="text-left px-4 py-2 text-sm font-semibold text-gray-700">Item</th>
+              <th class="text-center px-4 py-2 text-sm font-semibold text-gray-700">Unit</th>
+              <th class="text-center px-4 py-2 text-sm font-semibold text-gray-700">Qty</th>
+              <th class="text-right px-4 py-2 text-sm font-semibold text-gray-700">Rate (₹)</th>
+              <th class="text-right px-4 py-2 text-sm font-semibold text-gray-700">Amount (₹)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of billRows" class="border-b border-gray-200">
+              <td class="px-4 py-2 text-sm text-gray-900">{{ row.name }}</td>
+              <td class="text-center px-4 py-2 text-sm text-gray-700">{{ row.unit }}</td>
+              <td class="text-center px-4 py-2 text-sm text-gray-900">{{ row.qty }}</td>
+              <td class="text-right px-4 py-2 text-sm text-gray-900">{{ (row.rate || 0).toFixed(2) }}</td>
+              <td class="text-right px-4 py-2 text-sm text-gray-900 font-semibold">{{ (row.amount || 0).toFixed(2) }}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Invoice Summary -->
+        <div class="flex justify-end mb-6">
+          <div class="w-64 space-y-2">
+            <div class="flex justify-between text-sm border-b border-gray-200 pb-2">
+              <span class="text-gray-700">Subtotal:</span>
+              <span class="font-semibold text-gray-900">₹ {{ billingSubtotal.toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-sm border-b border-gray-200 pb-2">
+              <span class="text-gray-700">GST (18%):</span>
+              <span class="font-semibold text-gray-900">₹ {{ billingGST.toFixed(2) }}</span>
+            </div>
+            <div class="flex justify-between text-base font-bold border-t-2 border-gray-300 pt-2">
+              <span class="text-gray-900">Grand Total:</span>
+              <span class="text-indigo-600">₹ {{ billingGrandTotal.toFixed(2) }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Remarks -->
+        <div *ngIf="remarks" class="mb-6">
+          <h3 class="text-sm font-semibold text-gray-700 mb-2">Remarks:</h3>
+          <p class="text-sm text-gray-600">{{ remarks }}</p>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center text-xs text-gray-500 border-t border-gray-300 pt-4">
+          <p>Thank you for your business!</p>
+          <p class="mt-1">For any queries, contact: +91-XXXXXXXXXX | email&#64;nehasurgical.com</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <button
+          (click)="closePreviewModal()"
+          class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-medium"
+        >
+          Close
+        </button>
+        <button
+          (click)="printBilling()"
+          class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+        >
+          Print Invoice
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ View Order Modal ============ -->
+  <div *ngIf="isViewModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-start justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full mt-8 mb-8">
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <h2 class="text-xl font-semibold text-gray-900">Order Details</h2>
+        <button (click)="closeViewModal()" class="text-gray-400 hover:text-gray-600 transition">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="px-6 py-4 max-h-[calc(100vh-250px)] overflow-y-auto">
+        <!-- Basic Info -->
+        <div class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
+          <div class="grid grid-cols-2 gap-4 text-sm">
+            <div><span class="font-semibold text-gray-700">Order No:</span> <span class="text-gray-900">{{ selectedOrder?.orderNo }}</span></div>
+            <div><span class="font-semibold text-gray-700">Status:</span> <span class="text-gray-900">{{ selectedOrder?.status }}</span></div>
+            <div><span class="font-semibold text-gray-700">Doctor:</span> <span class="text-gray-900">{{ selectedOrder?.doctorName }}</span></div>
+            <div><span class="font-semibold text-gray-700">Hospital:</span> <span class="text-gray-900">{{ selectedOrder?.hospitalName }}</span></div>
+            <div><span class="font-semibold text-gray-700">Patient:</span> <span class="text-gray-900">{{ selectedOrder?.patientName }}</span></div>
+            <div><span class="font-semibold text-gray-700">Assistant:</span> <span class="text-gray-900">{{ selectedOrder?.assistantName }}</span></div>
+            <div><span class="font-semibold text-gray-700">Operation Date:</span> <span class="text-gray-900">{{ selectedOrder?.operationDate }}</span></div>
+            <div><span class="font-semibold text-gray-700">Operation Time:</span> <span class="text-gray-900">{{ selectedOrder?.operationTime }}</span></div>
+          </div>
+        </div>
+
+        <!-- Items -->
+        <div *ngIf="selectedOrder && selectedOrder.items && selectedOrder.items.length > 0" class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">Items</h3>
+          <div class="border border-gray-300 rounded-lg overflow-hidden">
+            <table class="w-full">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="text-left px-4 py-2 text-sm font-semibold text-gray-700">Item Name</th>
+                  <th class="text-center px-4 py-2 text-sm font-semibold text-gray-700">Unit</th>
+                  <th class="text-center px-4 py-2 text-sm font-semibold text-gray-700">Quantity</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let item of selectedOrder.items" class="border-t border-gray-200">
+                  <td class="px-4 py-2 text-sm text-gray-900">{{ item.name }}</td>
+                  <td class="text-center px-4 py-2 text-sm text-gray-700">{{ item.unit }}</td>
+                  <td class="text-center px-4 py-2 text-sm text-gray-900">{{ item.qty || item.qtyIssued }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Remarks -->
+        <div *ngIf="selectedOrder && selectedOrder.remarks" class="mb-6">
+          <h3 class="text-lg font-semibold text-gray-900 mb-3">Remarks</h3>
+          <p class="text-sm text-gray-600">{{ selectedOrder.remarks }}</p>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="flex items-center justify-end px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <button
+          (click)="closeViewModal()"
+          class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-medium"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
