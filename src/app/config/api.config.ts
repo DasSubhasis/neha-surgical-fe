@@ -195,6 +195,12 @@ export const ENDPOINTS = {
     REMINDER: '/Orders/Reminder',
   },
 
+  // Consumption Management
+  CONSUMPTIONS: {
+    BASE: '/Consumptions',
+    CREATE: '/Consumptions',
+  },
+
   // Assignment Management
   ASSIGNMENTS: {
     BASE: '/Assignments',

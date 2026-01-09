@@ -19,6 +19,7 @@ import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcru
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
 import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-dropdown.component';
 import { ItemService, Item as ItemMaster } from '../../services/item.service';
+import { AuthService } from '../../services/auth.service';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -170,7 +171,8 @@ export class ConsumptionBillingComponent implements OnInit {
     private toastService: ToastService,
     private cdr: ChangeDetectorRef,
     private router: Router,
-    private itemService: ItemService
+    private itemService: ItemService,
+    private authService: AuthService
   ) {
     this.initializeColumnDefs();
   }
@@ -479,52 +481,84 @@ export class ConsumptionBillingComponent implements OnInit {
       return;
     }
     
-    if (!this.noConsumption) {
-      const hasConsumption = this.consRows.some(r => Number(r.qtyConsumed) > 0);
-      if (!hasConsumption) {
-        this.toastService.error('At least one item with Qty > 0 required or mark "No Consumption"');
-        return;
-      }
+    // Validate that there are items to consume
+    if (!this.selectedOrder.items || this.selectedOrder.items.length === 0) {
+      this.toastService.error('No items to consume');
+      return;
     }
     
-    const consumedItems = this.noConsumption ? [] : this.consRows
-      .filter(r => Number(r.qtyConsumed) > 0)
-      .map(r => ({
-        id: r.id,
-        name: r.name,
-        unit: r.unit,
-        qty: Number(r.qtyConsumed),
-        remarks: r.remarks || ''
-      }));
-    
-    this.toastService.success('Consumption saved successfully');
-    this.isConsumptionModalOpen = false;
-    
-    // Update selected order with consumption records
-    if (this.selectedOrder) {
-      this.selectedOrder = {
-        ...this.selectedOrder,
-        consumptionRecords: consumedItems
-      };
+    // Get current user
+    const currentUser = this.authService.currentUser;
+    if (!currentUser || !currentUser.email) {
+      this.toastService.error('User not authenticated');
+      return;
     }
     
-    // Open map-to-billing modal
-    this.isMapToBillingModalOpen = true;
-    
-    // Initialize billing rows from consumed items
-    const consumedBillingRows = consumedItems.map(c => ({
-      id: `b-${c.id}`,
-      srcConsumptionId: c.id,
-      name: c.name,
-      unit: c.unit,
-      qty: c.qty,
-      rate: 0,
-      amount: 0,
-      fromConsumption: true
+    // Prepare consumed items from the items list
+    const consumedItems = this.selectedOrder.items.map(item => ({
+      id: item.id,
+      name: item.name,
+      quantity: item.quantity || 0,
+      type: item.manual ? 'Manual' : 'Auto'
     }));
     
-    this.billRows = consumedBillingRows;
-    this.mappedConsumptionIds = new Set(consumedBillingRows.map(b => b.srcConsumptionId!));
+    // Prepare the consumption request
+    const consumptionRequest = {
+      orderId: this.selectedOrder.orderId,
+      itemGroupId: 0, // Set to 0 or get from order if needed
+      itemGroupName: this.selectedOrder.itemGroups && this.selectedOrder.itemGroups.length > 0 
+        ? this.selectedOrder.itemGroups.join(', ') 
+        : '',
+      consumedItems: consumedItems,
+      createdBy: currentUser.email
+    };
+    
+    // Call the API
+    this.consumptionBillingService.saveConsumption(consumptionRequest).subscribe({
+      next: (response) => {
+        this.toastService.success('Consumption saved successfully');
+        this.isConsumptionModalOpen = false;
+        
+        // Update selected order with consumption records
+        if (this.selectedOrder) {
+          this.selectedOrder = {
+            ...this.selectedOrder,
+            consumptionRecords: consumedItems.map(item => ({
+              id: item.id,
+              name: item.name,
+              unit: 'pcs',
+              qty: item.quantity,
+              remarks: ''
+            }))
+          };
+        }
+        
+        // Initialize billing rows from consumed items
+        const consumedBillingRows = (this.selectedOrder?.consumptionRecords || []).map(c => ({
+          id: `b-${c.id}`,
+          srcConsumptionId: c.id,
+          name: c.name,
+          unit: c.unit,
+          qty: c.qty,
+          rate: 0,
+          amount: 0,
+          fromConsumption: true
+        }));
+        
+        this.billRows = consumedBillingRows;
+        this.mappedConsumptionIds = new Set(consumedBillingRows.map(b => b.srcConsumptionId!));
+        
+        // Close consumption modal
+        this.isConsumptionModalOpen = false;
+        
+        // Refresh the AG Grid to get updated orders
+        this.loadData();
+      },
+      error: (error) => {
+        console.error('Error saving consumption:', error);
+        this.toastService.error(error.message || 'Failed to save consumption');
+      }
+    });
   }
 
   // ============ Map to Billing Methods ============

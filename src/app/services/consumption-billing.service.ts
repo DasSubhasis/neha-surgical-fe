@@ -99,6 +99,21 @@ export interface AuditEntry {
   action: string;
 }
 
+export interface ConsumedItemRequest {
+  id: string;
+  name: string;
+  quantity: number;
+  type: string;
+}
+
+export interface ConsumptionRequest {
+  orderId: number;
+  itemGroupId: number;
+  itemGroupName: string;
+  consumedItems: ConsumedItemRequest[];
+  createdBy: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -115,14 +130,8 @@ export class ConsumptionBillingService {
   }
 
   // Save consumption entry
-  saveConsumption(orderId: number, consumedItems: ConsumptionRecord[], attachments: Attachment[], remarks: string): Observable<any> {
-    const payload = {
-      orderId,
-      consumedItems,
-      attachments,
-      remarks
-    };
-    return this.apiService.post<any>(`${ENDPOINTS.ORDERS.BASE}/consumption`, payload);
+  saveConsumption(payload: ConsumptionRequest): Observable<any> {
+    return this.apiService.post<any>(ENDPOINTS.CONSUMPTIONS.CREATE, payload);
   }
 
   // Save billing entry
