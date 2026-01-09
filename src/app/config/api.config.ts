@@ -75,6 +75,19 @@ export const ENDPOINTS = {
     DELETE: (id: string | number) => `/roles/${id}`,
   },
   
+  // Menu Management
+  MENUS: {
+    BASE: '/Menus',
+    LIST: (isActive?: string) => `/Menus${isActive ? `?isActive=${isActive}` : ''}`,
+    USER_MENUS: '/Menus/user-menus',
+    GET: (id: string | number) => `/Menus/${id}`,
+    CREATE: '/Menus',
+    UPDATE: (id: string | number) => `/Menus/${id}`,
+    DELETE: (id: string | number) => `/Menus/${id}`,
+    USER_PERMISSIONS: (userId: number) => `/Menus/user-permissions/${userId}`,
+    ASSIGN_USER_PERMISSIONS: (userId: number) => `/Menus/user-permissions/${userId}`,
+  },
+  
   // Doctor Management
   DOCTORS: {
     BASE: '/Doctors',
@@ -356,6 +369,7 @@ export const STORAGE_KEYS = {
   USER_PHONE: 'userPhone',
   USER_CLUB_CATEGORY: 'userClubCategory',
   USER_BAND: 'userBand',
+  USER_PERMISSIONS: 'userPermissions',
   IS_AUTHENTICATED: 'isAuthenticated',
   IS_FIRST_TIME_LOGIN: 'isFirstTimeLogin',
   HAS_LOGGED_IN_BEFORE: 'hasLoggedInBefore',

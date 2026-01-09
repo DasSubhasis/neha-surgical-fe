@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
+import { map, catchError, tap, switchMap } from 'rxjs/operators';
 import { 
   getCurrentApiConfig, 
   ENDPOINTS, 
@@ -20,6 +20,7 @@ export interface User {
   role?: string;
   roleId?: number;
   roleName?: string;
+  permissions?: number[];
   phoneNo?: string;
   clubCategory?: string;
   band?: string;
@@ -79,14 +80,19 @@ export class AuthService {
     const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
     
     if (isAuthenticated === 'true' && token) {
+      const permissionsStr = localStorage.getItem(STORAGE_KEYS.USER_PERMISSIONS);
+      const permissions = permissionsStr ? JSON.parse(permissionsStr) : [];
+      const roleId = parseInt(localStorage.getItem(STORAGE_KEYS.USER_ROLE_ID) || '0');
+      
       const user: User = {
         id: localStorage.getItem(STORAGE_KEYS.USER_ID) || undefined,
         systemUserId: parseInt(localStorage.getItem(STORAGE_KEYS.USER_ID) || '0'),
         email: localStorage.getItem(STORAGE_KEYS.USER_EMAIL) || '',
         name: localStorage.getItem(STORAGE_KEYS.USER_NAME) || '',
         fullName: localStorage.getItem(STORAGE_KEYS.USER_NAME) || '',
-        roleId: parseInt(localStorage.getItem(STORAGE_KEYS.USER_ROLE_ID) || '0'),
+        roleId: roleId,
         roleName: localStorage.getItem(STORAGE_KEYS.USER_ROLE_NAME) || '',
+        permissions: permissions,
         phoneNo: localStorage.getItem(STORAGE_KEYS.USER_PHONE) || '',
         clubCategory: localStorage.getItem(STORAGE_KEYS.USER_CLUB_CATEGORY) || undefined,
         band: localStorage.getItem(STORAGE_KEYS.USER_BAND) || undefined,
@@ -94,6 +100,12 @@ export class AuthService {
       };
       this.currentUserSubject.next(user);
       this.isFirstTimeLoginSubject.next(user.isFirstTimeLogin || false);
+      
+      // If permissions are empty but we have a roleId, fetch permissions
+      if (permissions.length === 0 && roleId > 0) {
+        console.log('Permissions empty, fetching for roleId:', roleId);
+        this.fetchAndStoreRolePermissions(roleId).subscribe();
+      }
     }
   }
 
@@ -160,10 +172,22 @@ export class AuthService {
     return this.http.post<AuthResponse>(url, { email, otp }, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
-      tap(response => {
+      switchMap(response => {
+        console.log('OTP verify response:', response);
         if (response.data) {
           this.handleAuthSuccess(response.data);
+          
+          // Fetch role permissions if roleId exists
+          if (response.data.user?.roleId) {
+            console.log('User has roleId:', response.data.user.roleId);
+            return this.fetchAndStoreRolePermissions(response.data.user.roleId).pipe(
+              map(() => response)
+            );
+          } else {
+            console.warn('No roleId found in response.data.user');
+          }
         }
+        return of(response);
       }),
       catchError(error => {
         console.error('Verify OTP error:', error);
@@ -429,6 +453,47 @@ export class AuthService {
         return throwError(() => ({
           message: ERROR_MESSAGES.UNAUTHORIZED
         }));
+      })
+    );
+  }
+
+  /**
+   * Fetch role permissions from the backend and store them
+   */
+  private fetchAndStoreRolePermissions(roleId: number): Observable<void> {
+    const url = this.buildUrl(`/api/Roles/${roleId}`);
+    const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+    
+    console.log('Fetching permissions for roleId:', roleId);
+    
+    return this.http.get<any>(url, {
+      headers: new HttpHeaders({
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      })
+    }).pipe(
+      map((response: any) => {
+        console.log('Role API response:', response);
+        const permissions = response?.data?.permissions || response?.permissions || [];
+        console.log('Extracted permissions:', permissions);
+        
+        // Store permissions in localStorage
+        localStorage.setItem(STORAGE_KEYS.USER_PERMISSIONS, JSON.stringify(permissions));
+        
+        // Update current user with permissions
+        const currentUser = this.currentUserSubject.value;
+        if (currentUser) {
+          this.currentUserSubject.next({
+            ...currentUser,
+            permissions: permissions
+          });
+          console.log('Updated user with permissions:', permissions);
+        }
+      }),
+      catchError(error => {
+        console.error('Failed to fetch role permissions:', error);
+        // Don't fail the login if permissions fetch fails
+        return of(void 0);
       })
     );
   }

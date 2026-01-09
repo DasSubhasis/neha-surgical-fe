@@ -84,14 +84,14 @@ export class SidebarComponent implements OnInit {
         { key: 'material-delivery', label: 'Material Delivery', icon: 'shipping-fast' },
         { key: 'assistant-operations', label: 'Assistant Operations', icon: 'hospital-user' },
         { key: 'consumption-billing', label: 'Consumption & Billing', icon: 'file-invoice' },
-        { key: 'payment-collection', label: 'Payment Collection', icon: 'hand-holding-dollar' }
+        // { key: 'payment-collection', label: 'Payment Collection', icon: 'hand-holding-dollar' }
       ]
     },
-    {
-      key: 'reports', label: 'Reports', icon: 'chart-pie', submenu: [
-        { key: 'order-reminder', label: 'Upcoming Orders', icon: 'clock' }
-      ]
-    },
+    // {
+    //   key: 'reports', label: 'Reports', icon: 'chart-pie', submenu: [
+    //     { key: 'order-reminder', label: 'Upcoming Orders', icon: 'clock' }
+    //   ]
+    // },
     {
       key: 'settings', label: 'Settings', icon: 'user-cog', submenu: [
         { key: 'user', label: 'User', icon: 'users' },
@@ -100,6 +100,11 @@ export class SidebarComponent implements OnInit {
       ]
     },
   ];
+
+  get filteredMenuItems(): MenuItem[] {
+    // Return all menu items (permissions filtering can be added later)
+    return this.menuItems;
+  }
 
   toggleSubmenu(menuKey: string): void {
     this.openMenus[menuKey] = !this.openMenus[menuKey];
