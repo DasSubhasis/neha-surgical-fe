@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  # Development service
+  neha-surgical-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: neha-surgical-dev
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./src:/app/src
+      - ./public:/app/public
+      - ./angular.json:/app/angular.json
+      - ./tsconfig.json:/app/tsconfig.json
+      - ./tsconfig.app.json:/app/tsconfig.app.json
+      - ./tailwind.config.js:/app/tailwind.config.js
+      # Prevent node_modules from being overwritten
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    networks:
+      - neha-surgical-network
+    profiles:
+      - dev
+
+  # Production service
+  neha-surgical-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: neha-surgical-prod
+    ports:
+      - "80:80"
+    networks:
+      - neha-surgical-network
+    profiles:
+      - prod
+    restart: unless-stopped
+
+networks:
+  neha-surgical-network:
+    driver: bridge

@@ -62,41 +62,41 @@ export interface BillingRecord {
 }
 
 export interface Order {
-  id: number;
+  orderId: number;
   orderNo: string;
+  orderDate: string;
+  doctorId: number;
   doctorName: string;
+  hospitalId: number;
   hospitalName: string;
-  hospitalAddress?: string;
-  patientName?: string;
-  assistantName?: string;
   operationDate: string;
   operationTime: string;
-  assignedAssistantId: number | null;
-  status: string;
+  materialSendDate: string;
+  itemGroups: string[];
   items: OrderItem[];
-  itemGroups?: string[];
+  remarks: string;
+  createdBy: string;
+  status: string;
+  isDelivered: string;
+  audits: AuditEntry[];
+  // Additional fields for consumption/billing
   consumptionRecords?: ConsumptionRecord[];
   billingRecords?: BillingRecord[];
   attachments?: Attachment[];
-  remarks?: string;
-  auditLog?: AuditEntry[];
 }
 
 export interface OrderItem {
   id: string;
   name: string;
-  unit: string;
-  group?: string;
-  qtyIssued: number;
-  qty?: number; // Alternative field name
+  manual: boolean | null;
+  isGroup: boolean | null;
+  quantity: number;
 }
 
 export interface AuditEntry {
-  timestamp: string;
+  when: string;
+  by: string;
   action: string;
-  itemsCount: number;
-  user: string;
-  totalAmount?: number;
 }
 
 @Injectable({
@@ -106,16 +106,11 @@ export class ConsumptionBillingService {
 
   constructor(private apiService: ApiService) { }
 
-  // Get billable orders (completed orders with assigned assistants)
+  // Get billable orders (completed orders with Pre-Billing status)
   getBillableOrders(): Observable<Order[]> {
-    return this.apiService.get<any>(ENDPOINTS.ORDERS.LIST).pipe(
-      map(response => {
-        const data = response?.data || response || [];
-        return data.filter((order: any) => 
-          order.assignedAssistantId && 
-          ['Completed (Not Billed)', 'Completed (Pre-Billing)', 'Completed'].includes(order.status)
-        );
-      })
+    const status = 'Completed (Pre-Billing)';
+    return this.apiService.get<ApiResponse<Order[]>>(`${ENDPOINTS.ORDERS.BASE}?status=${encodeURIComponent(status)}`).pipe(
+      map(response => response.data || [])
     );
   }
 
@@ -142,8 +137,8 @@ export class ConsumptionBillingService {
 
   // Get order details
   getOrderDetails(orderId: number): Observable<Order> {
-    return this.apiService.get<any>(ENDPOINTS.ORDERS.GET(orderId)).pipe(
-      map(response => response?.data || response)
+    return this.apiService.get<ApiResponse<Order>>(ENDPOINTS.ORDERS.GET(orderId)).pipe(
+      map(response => response.data!)
     );
   }
 }

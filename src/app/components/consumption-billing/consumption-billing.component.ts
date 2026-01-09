@@ -17,6 +17,8 @@ import {
 import { ToastService } from '../../services/toast.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
+import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-dropdown.component';
+import { ItemService, Item as ItemMaster } from '../../services/item.service';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -86,7 +88,7 @@ const ITEMS_BY_GROUP: { [key: string]: Item[] } = {
 @Component({
   selector: 'app-consumption-billing',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridAngular, BreadcrumbComponent, ActionDropdownComponent],
+  imports: [CommonModule, FormsModule, AgGridAngular, BreadcrumbComponent, ActionDropdownComponent, SearchableDropdownComponent],
   templateUrl: './consumption-billing.component.html',
   styles: [`
     :host ::ng-deep .ag-header-small-font .ag-header-cell-label {
@@ -102,6 +104,9 @@ export class ConsumptionBillingComponent implements OnInit {
   // Data
   orders: Order[] = [];
   billableOrders: Order[] = [];
+  availableItems: ItemMaster[] = [];
+  selectedItemId: number | null = null;
+  newItemQuantity: number = 1;
   
   // Modal States
   isConsumptionModalOpen = false;
@@ -164,13 +169,15 @@ export class ConsumptionBillingComponent implements OnInit {
     private consumptionBillingService: ConsumptionBillingService,
     private toastService: ToastService,
     private cdr: ChangeDetectorRef,
-    private router: Router
+    private router: Router,
+    private itemService: ItemService
   ) {
     this.initializeColumnDefs();
   }
 
   ngOnInit(): void {
     this.loadData();
+    this.loadAvailableItems();
   }
 
   private initializeColumnDefs(): void {
@@ -218,13 +225,6 @@ export class ConsumptionBillingComponent implements OnInit {
           consBtn.innerHTML = '<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>';
           consBtn.addEventListener('click', () => this.handleOpenConsumption(params.data));
           
-          // Billing button
-          const billBtn = document.createElement('button');
-          billBtn.className = 'flex items-center justify-center text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded';
-          billBtn.title = 'Billing Items';
-          billBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>';
-          billBtn.addEventListener('click', () => this.handleOpenBilling(params.data));
-          
           // View button
           const viewBtn = document.createElement('button');
           viewBtn.className = 'flex items-center justify-center text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded';
@@ -233,7 +233,6 @@ export class ConsumptionBillingComponent implements OnInit {
           viewBtn.addEventListener('click', () => this.handleViewOrder(params.data));
           
           container.appendChild(consBtn);
-          container.appendChild(billBtn);
           container.appendChild(viewBtn);
           
           return container;
@@ -275,8 +274,8 @@ export class ConsumptionBillingComponent implements OnInit {
     this.consRows = order.items?.map(it => ({
       id: it.id,
       name: it.name,
-      unit: it.unit || 'pcs',
-      group: it.group || null,
+      unit: 'pcs',
+      group: null,
       qtyConsumed: 0,
       remarks: ''
     })) || [];
@@ -292,6 +291,65 @@ export class ConsumptionBillingComponent implements OnInit {
     this.selectedOrder = null;
     this.consRows = [];
     this.selectedItemGroups = [];
+  }
+
+  removeOrderItem(index: number): void {
+    if (this.selectedOrder && this.selectedOrder.items) {
+      this.selectedOrder.items = this.selectedOrder.items.filter((_, i) => i !== index);
+    }
+  }
+
+  loadAvailableItems(): void {
+    this.itemService.getAllItems(true).subscribe({
+      next: (items) => {
+        this.availableItems = items;
+      },
+      error: (error) => {
+        console.error('Error loading items:', error);
+        this.toastService.error('Failed to load items');
+      }
+    });
+  }
+
+  addNewItem(): void {
+    if (!this.selectedItemId || !this.selectedOrder) {
+      this.toastService.error('Please select an item');
+      return;
+    }
+
+    const selectedItem = this.availableItems.find(item => item.id === this.selectedItemId || item.itemId === this.selectedItemId);
+    if (!selectedItem) {
+      this.toastService.error('Selected item not found');
+      return;
+    }
+
+    // Check if item already exists
+    const itemExists = this.selectedOrder.items?.some(item => item.name === selectedItem.name);
+    if (itemExists) {
+      this.toastService.error('Item already exists in the list');
+      return;
+    }
+
+    // Add item to the list with manual flag
+    const newItem = {
+      id: String(selectedItem.id || selectedItem.itemId || 0),
+      name: selectedItem.name,
+      manual: true,
+      isGroup: false,
+      quantity: this.newItemQuantity
+    };
+
+    if (!this.selectedOrder.items) {
+      this.selectedOrder.items = [];
+    }
+
+    this.selectedOrder.items.push(newItem);
+    
+    // Reset form
+    this.selectedItemId = null;
+    this.newItemQuantity = 1;
+    
+    this.toastService.success('Item added successfully');
   }
 
   onItemGroupsChange(): void {
