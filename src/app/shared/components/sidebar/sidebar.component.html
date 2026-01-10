@@ -33,7 +33,7 @@
   <!-- Navigation -->
   <nav class="flex-1 overflow-y-auto p-2">
     <ul class="space-y-2">
-      <li *ngFor="let item of menuItems">
+      <li *ngFor="let item of filteredMenuItems">
         <!-- Menu Item Button -->
         <button
           (click)="item.submenu.length > 0 ? toggleSubmenu(item.key) : handleMenuClick(item.key)"

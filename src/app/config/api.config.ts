@@ -412,6 +412,17 @@ export const PAGINATION = {
   MAX_PAGE_SIZE: 1000,
 } as const;
 
+// Role IDs - Update these based on your backend role IDs
+export const ROLE_IDS = {
+  SUPER_ADMIN: 1,
+  ADMIN: 2,
+  USER: 3,
+  FIELD_ASSISTANT: 4,
+  ACCOUNTANT: 5,
+  DELIVERY: 6,
+  // Add more roles as needed
+} as const;
+
 // Date/Time formats
 export const DATE_FORMATS = {
   DISPLAY: 'MM/dd/yyyy',
