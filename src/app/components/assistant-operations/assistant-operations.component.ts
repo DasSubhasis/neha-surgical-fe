@@ -437,12 +437,50 @@ export class AssistantOperationsComponent implements OnInit {
           this.selectedOrderRow = null;
           this.isSaving = false;
           
-          // Close process modal after successful check-in/out
-          this.isProcessModalOpen = false;
-          this.processOrderRow = null;
-          
           // Refresh data to update tabs and counts
           this.loadData();
+          
+          // Update the processOrderRow with fresh status if modal is still open
+          if (this.isProcessModalOpen && this.processOrderRow && currentUser?.systemUserId) {
+            this.assistantOpsService.getAssistantOperationStatus(
+              this.processOrderRow.id, 
+              currentUser.systemUserId
+            ).subscribe({
+              next: (status) => {
+                if (this.processOrderRow) {
+                  this.processOrderRow = {
+                    ...this.processOrderRow,
+                    hasCheckedIn: status.hasCheckedIn,
+                    hasCheckedOut: status.hasCheckedOut
+                  };
+                  console.log('Refreshed processOrderRow status after check-in/out:', status);
+                  this.cdr.detectChanges();
+                }
+              },
+              error: (error) => {
+                console.error('Error refreshing status:', error);
+              }
+            });
+            
+            // Also refresh the timeline
+            this.assistantOpsService.getOperationHistory(
+              this.processOrderRow.id, 
+              currentUser.systemUserId
+            ).subscribe({
+              next: (timeline) => {
+                if (this.processOrderRow) {
+                  this.processOrderRow = {
+                    ...this.processOrderRow,
+                    timeline: timeline
+                  };
+                  this.cdr.detectChanges();
+                }
+              },
+              error: (error) => {
+                console.error('Error refreshing timeline:', error);
+              }
+            });
+          }
           
           // Force change detection
           this.cdr.detectChanges();
@@ -569,25 +607,44 @@ export class AssistantOperationsComponent implements OnInit {
     this.processOrderRow = { ...order }; // Create a copy to avoid reference issues
     this.isProcessModalOpen = true;
     
-    // Fetch operation history from API
+    // Fetch operation history and status from API
     const currentUser = this.authService.currentUser;
     if (currentUser && currentUser.systemUserId) {
+      // Fetch both timeline and current status
       this.assistantOpsService.getOperationHistory(order.id, currentUser.systemUserId).subscribe({
         next: (timeline) => {
-          // Update the processOrderRow with fetched timeline while preserving status
+          // Update the processOrderRow with fetched timeline
           if (this.processOrderRow) {
             this.processOrderRow = {
               ...this.processOrderRow,
               timeline: timeline
             };
-            console.log('Updated processOrderRow:', this.processOrderRow);
-            console.log('Updated status:', this.processOrderRow.status);
-            this.cdr.detectChanges();
           }
         },
         error: (error) => {
           console.error('Error fetching operation history:', error);
           this.toastService.error('Failed to load operation history');
+        }
+      });
+      
+      // Fetch current assistant's operation status
+      this.assistantOpsService.getAssistantOperationStatus(order.id, currentUser.systemUserId).subscribe({
+        next: (status) => {
+          // Update hasCheckedIn and hasCheckedOut based on actual API data
+          if (this.processOrderRow) {
+            this.processOrderRow = {
+              ...this.processOrderRow,
+              hasCheckedIn: status.hasCheckedIn,
+              hasCheckedOut: status.hasCheckedOut
+            };
+            console.log('Updated processOrderRow with status:', this.processOrderRow);
+            console.log('hasCheckedIn:', status.hasCheckedIn, 'hasCheckedOut:', status.hasCheckedOut);
+            this.cdr.detectChanges();
+          }
+        },
+        error: (error) => {
+          console.error('Error fetching operation status:', error);
+          this.toastService.error('Failed to load operation status');
         }
       });
     }

@@ -14,6 +14,8 @@ export interface TimelineEntry {
   comments: string;
   coords: Coordinates | null;
   gpsLocation: string | null;
+  assistantId?: number;  // ID of the assistant who performed this action
+  assistantName?: string;  // Name of the assistant (optional)
 }
 
 export interface OrderItem {
@@ -64,6 +66,8 @@ export interface AssistantOrder {
   status: 'Assigned' | 'Scheduled' | 'In Operation' | 'Completed (Pre-Billing)';
   visited: boolean;
   timeline: TimelineEntry[];
+  hasCheckedIn?: boolean;  // Whether current assistant has checked in
+  hasCheckedOut?: boolean; // Whether current assistant has checked out
 }
 
 export interface Assistant {
@@ -158,22 +162,38 @@ export class AssistantOperationsService {
         const data = response?.data || response || [];
         
         // Map the API response to AssistantOrder interface
-        return data.map((order: any) => ({
-          id: order.orderId || order.id,
-          orderNo: order.orderNo,
-          doctorName: order.doctorName,
-          hospitalName: order.hospitalName,
-          operationDate: order.operationDate,
-          operationTime: order.operationTime,
-          materialSendDate: order.materialSendDate,
-          reportingTime: order.reportingTime || 'Not Set',
-          assignedAssistantId: order.assignedAssistantId || null,
-          assignedAssistantName: order.assignedAssistantName || null,
-          // Convert API status back to UI format (e.g., "In-operation" -> "In Operation")
-          status: order.status ? this.mapStatusFromApi(order.status) : 'Assigned',
-          visited: order.visited || false,
-          timeline: order.timeline || []
-        }));
+        return data.map((order: any) => {
+          const timeline = order.timeline || [];
+          // Check if current assistant has checked in/out based on timeline
+          // Filter timeline by current assistant ID if assistantId is provided in timeline entries
+          const hasCheckedIn = timeline.some((entry: TimelineEntry) => 
+            entry.type === 'Check In' && 
+            (entry.assistantId === undefined || entry.assistantId === null || entry.assistantId === assignedId)
+          );
+          const hasCheckedOut = timeline.some((entry: TimelineEntry) => 
+            entry.type === 'Check Out' && 
+            (entry.assistantId === undefined || entry.assistantId === null || entry.assistantId === assignedId)
+          );
+          
+          return {
+            id: order.orderId || order.id,
+            orderNo: order.orderNo,
+            doctorName: order.doctorName,
+            hospitalName: order.hospitalName,
+            operationDate: order.operationDate,
+            operationTime: order.operationTime,
+            materialSendDate: order.materialSendDate,
+            reportingTime: order.reportingTime || 'Not Set',
+            assignedAssistantId: order.assignedAssistantId || null,
+            assignedAssistantName: order.assignedAssistantName || null,
+            // Convert API status back to UI format (e.g., "In-operation" -> "In Operation")
+            status: order.status ? this.mapStatusFromApi(order.status) : 'Assigned',
+            visited: order.visited || false,
+            timeline: timeline,
+            hasCheckedIn: hasCheckedIn,
+            hasCheckedOut: hasCheckedOut
+          };
+        });
       })
     );
   }
@@ -261,6 +281,23 @@ export class AssistantOperationsService {
         
         // Sort by timestamp descending (newest first)
         return timeline.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
+      })
+    );
+  }
+
+  // Get current assistant's operation status for a specific order
+  getAssistantOperationStatus(orderId: number, assistantId: number): Observable<{ hasCheckedIn: boolean; hasCheckedOut: boolean }> {
+    const url = `${ENDPOINTS.ASSISTANT_OPERATIONS.BASE}?orderId=${orderId}&assistantId=${assistantId}`;
+    
+    return this.apiService.get<any>(url).pipe(
+      map(response => {
+        const data = response?.data || response || [];
+        
+        // Check if there's any record with checkinTime or checkoutTime
+        const hasCheckedIn = data.some((record: any) => record.checkinTime !== null);
+        const hasCheckedOut = data.some((record: any) => record.checkoutTime !== null);
+        
+        return { hasCheckedIn, hasCheckedOut };
       })
     );
   }

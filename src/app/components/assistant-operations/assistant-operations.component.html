@@ -538,91 +538,37 @@
           
           <!-- Action Buttons -->
           <div class="flex gap-2 pt-3 border-t border-purple-200">
-            <ng-container [ngSwitch]="processOrderRow.status">
-              <!-- Check-in button for Assigned/Scheduled status -->
-              <button
-                *ngSwitchCase="'Assigned'"
-                (click)="openCheckModal(processOrderRow, 'checkin')"
-                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors duration-200 shadow-sm font-medium"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-                Check-in
-              </button>
-              
-              <button
-                *ngSwitchCase="'Scheduled'"
-                (click)="openCheckModal(processOrderRow, 'checkin')"
-                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors duration-200 shadow-sm font-medium"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                </svg>
-                Check-in
-              </button>
-
-              <!-- Check-out button for In Operation status (all formats) -->
-              <button
-                *ngSwitchCase="'In Operation'"
-                (click)="openCheckModal(processOrderRow, 'checkout')"
-                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors duration-200 shadow-sm font-medium"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Check-out
-              </button>
-              
-              <button
-                *ngSwitchCase="'In operation'"
-                (click)="openCheckModal(processOrderRow, 'checkout')"
-                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors duration-200 shadow-sm font-medium"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Check-out
-              </button>
-              
-              <button
-                *ngSwitchCase="'In-operation'"
-                (click)="openCheckModal(processOrderRow, 'checkout')"
-                class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors duration-200 shadow-sm font-medium"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Check-out
-              </button>
-              
-              <!-- Completed status - no action buttons -->
-              <div
-                *ngSwitchCase="'Completed (Pre-Billing)'"
-                class="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-lg text-center"
-              >
-                <p class="text-sm text-gray-600">Order is completed. No further actions required.</p>
-              </div>
-              
-              <div
-                *ngSwitchCase="'Completed (Pre Billing)'"
-                class="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-lg text-center"
-              >
-                <p class="text-sm text-gray-600">Order is completed. No further actions required.</p>
-              </div>
-              
-              <div
-                *ngSwitchCase="'Completed-(pre-billing)'"
-                class="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-lg text-center"
-              >
-                <p class="text-sm text-gray-600">Order is completed. No further actions required.</p>
-              </div>
-              
-              <!-- Default case - show current status for debugging -->
-              <div *ngSwitchDefault class="flex-1 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
-                Unknown status: "{{ processOrderRow.status }}"
-              </div>
-            </ng-container>
+            <!-- Check-in button - show if current assistant has NOT checked in -->
+            <button
+              *ngIf="!processOrderRow.hasCheckedIn"
+              (click)="openCheckModal(processOrderRow, 'checkin')"
+              class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors duration-200 shadow-sm font-medium"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+              </svg>
+              Check-in
+            </button>
+            
+            <!-- Check-out button - show if current assistant HAS checked in but NOT checked out -->
+            <button
+              *ngIf="processOrderRow.hasCheckedIn && !processOrderRow.hasCheckedOut"
+              (click)="openCheckModal(processOrderRow, 'checkout')"
+              class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors duration-200 shadow-sm font-medium"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Check-out
+            </button>
+            
+            <!-- Completed status - show if current assistant has checked in AND checked out -->
+            <div
+              *ngIf="processOrderRow.hasCheckedIn && processOrderRow.hasCheckedOut"
+              class="flex-1 p-3 bg-gray-50 border border-gray-200 rounded-lg text-center"
+            >
+              <p class="text-sm text-gray-600">You have completed your check-in/check-out for this order.</p>
+            </div>
           </div>
         </div>
 
