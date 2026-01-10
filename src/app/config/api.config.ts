@@ -22,7 +22,7 @@ export const API_CONFIG: ApiConfigMap = {
   
   // Production environment
   PROD: {
-    BASE_URL: 'https://your-production-api.com/api',
+    BASE_URL: 'https://neha.zicorpcloud.in/api',
     TIMEOUT: 60000, // 60 seconds
   },
   
@@ -33,9 +33,33 @@ export const API_CONFIG: ApiConfigMap = {
   }
 };
 
-// Current environment - Change this based on your deployment
+// Current environment - Auto-detected based on hostname
 export type Environment = 'DEV' | 'STAGING' | 'PROD';
-export const CURRENT_ENV: Environment = 'DEV';
+
+// Auto-detect environment based on hostname
+const getEnvironment = (): Environment => {
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    
+    // Production domain
+    if (hostname === 'neha.zicorpcloud.in' || hostname.includes('zicorpcloud.in')) {
+      return 'PROD';
+    }
+    
+    // Staging domain (if you have one)
+    if (hostname.includes('staging')) {
+      return 'STAGING';
+    }
+    
+    // Development (localhost or any other domain)
+    return 'DEV';
+  }
+  
+  // Default to DEV for SSR or non-browser environments
+  return 'DEV';
+};
+
+export const CURRENT_ENV: Environment = getEnvironment();
 
 // Get current API configuration
 export const getCurrentApiConfig = (): ApiConfig => {
