@@ -12,7 +12,7 @@
     </div>
   </div>
 
-  <!-- AG Grid Container -->
+  <!-- Cards Container -->
   <div class="flex-1 min-h-0 relative">
     <!-- Loading Overlay -->
     <div *ngIf="loading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
@@ -44,25 +44,101 @@
       </div>
     </div>
 
-    <!-- AG Grid -->
-    <ag-grid-angular
-      *ngIf="!hasError"
-      class="ag-theme-alpine h-full w-full"
-      [style.height.px]="'calc(100vh - 130px)'"
-      [rowData]="assignments"
-      [columnDefs]="columnDefs"
-      [defaultColDef]="defaultColDef"
-      [pagination]="true"
-      [paginationPageSize]="10"
-      [paginationPageSizeSelector]="[10, 25, 50]"
-      [domLayout]="'normal'"
-      [suppressRowClickSelection]="true"
-      [rowSelection]="'multiple'"
-      [animateRows]="true"
-      [suppressMenuHide]="true"
-      overlayNoRowsTemplate="<span class='ag-overlay-no-rows-center'>No records found</span>"
-      (gridReady)="onGridReady($event)"
-    ></ag-grid-angular>
+    <!-- Cards List -->
+    <div *ngIf="!hasError && !loading" class="h-full overflow-y-auto pb-4">
+      <!-- No Records State -->
+      <div *ngIf="filteredAssignments.length === 0" class="flex items-center justify-center h-64">
+        <div class="text-center text-gray-500">
+          <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p class="text-sm font-medium">No records found</p>
+          <p class="text-xs text-gray-400 mt-1">Try adjusting your filters</p>
+        </div>
+      </div>
+
+      <!-- Assignment Cards -->
+      <div class="space-y-3">
+        <div *ngFor="let assignment of filteredAssignments" 
+             class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
+          <div class="p-4">
+            <!-- Card Header -->
+            <div class="flex justify-between items-start mb-3">
+              <div class="flex-1">
+                <div class="flex items-center gap-2 mb-1">
+                  <h3 class="text-base font-semibold text-gray-900">{{ assignment.orderNo }}</h3>
+                  <span 
+                    class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+                    [class.bg-gray-100]="assignment.status === 'Pending'"
+                    [class.text-gray-800]="assignment.status === 'Pending'"
+                    [class.bg-green-100]="assignment.status === 'Assigned'"
+                    [class.text-green-800]="assignment.status === 'Assigned'"
+                  >
+                    {{ assignment.status }}
+                  </span>
+                </div>
+                <p class="text-sm text-gray-600">{{ assignment.patient }}</p>
+              </div>
+              <button 
+                (click)="viewOrderDetails(assignment.id)"
+                class="flex items-center justify-center text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded transition-colors duration-200"
+                title="View Details"
+              >
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 640 640">
+                  <path d="M320 96C239.2 96 174.5 132.8 127.4 176.6C80.6 220.1 49.3 272 34.4 307.7C31.1 315.6 31.1 324.4 34.4 332.3C49.3 368 80.6 420 127.4 463.4C174.5 507.1 239.2 544 320 544C400.8 544 465.5 507.2 512.6 463.4C559.4 419.9 590.7 368 605.6 332.3C608.9 324.4 608.9 315.6 605.6 307.7C590.7 272 559.4 220 512.6 176.6C465.5 132.9 400.8 96 320 96zM176 320C176 240.5 240.5 176 320 176C399.5 176 464 240.5 464 320C464 399.5 399.5 464 320 464C240.5 464 176 399.5 176 320zM320 256C320 291.3 291.3 320 256 320C244.5 320 233.7 317 224.3 311.6C223.3 322.5 224.2 333.7 227.2 344.8C240.9 396 293.6 426.4 344.8 412.7C396 399 426.4 346.3 412.7 295.1C400.5 249.4 357.2 220.3 311.6 224.3C316.9 233.6 320 244.4 320 256z" />
+                </svg>
+              </button>
+            </div>
+
+            <!-- Card Body -->
+            <div class="space-y-2">
+              <!-- Assistant Info -->
+              <div class="flex items-center text-sm">
+                <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span class="text-gray-600">
+                  <span class="font-medium">Assistant:</span> 
+                  {{ assignment.assistantName || 'Unassigned' }}
+                </span>
+              </div>
+
+              <!-- Operation Date/Time -->
+              <div class="flex items-center text-sm">
+                <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span class="text-gray-600">
+                  <span class="font-medium">Operation:</span> 
+                  {{ assignment.operationDate }} {{ assignment.operationTime }}
+                </span>
+              </div>
+
+              <!-- Reporting Time -->
+              <div *ngIf="assignment.reportingTime" class="flex items-center text-sm">
+                <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="text-gray-600">
+                  <span class="font-medium">Reporting:</span> 
+                  {{ assignment.reportingTime }}
+                </span>
+              </div>
+
+              <!-- Remarks -->
+              <div *ngIf="assignment.remarks" class="flex items-start text-sm">
+                <svg class="w-4 h-4 mr-2 mt-0.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                </svg>
+                <span class="text-gray-600 line-clamp-2">
+                  {{ assignment.remarks }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Loading Overlay for View Details -->
@@ -167,48 +243,128 @@
     </div>
   </div>
 
-  <!-- Pending Orders Modal for Assignment -->
+  <!-- Pending Orders Modal for Assignment - Mobile Bottom Sheet Style -->
   <div *ngIf="isPendingOrdersModalOpen" 
-       class="fixed inset-0 bg-gray-900 bg-opacity-10 z-50 flex items-center justify-center p-4">
-    <div class="relative w-full max-w-6xl mx-auto bg-white rounded-xl shadow-2xl overflow-hidden" 
-         style="max-height: 90vh;">
+       class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-end" (click)="closePendingOrdersModal()">
+    <div class="relative w-full bg-white rounded-t-3xl shadow-2xl overflow-hidden animate-slide-up max-h-[90vh] flex flex-col" (click)="$event.stopPropagation()">
+      <!-- Drag Handle -->
+      <div class="flex justify-center py-3 flex-shrink-0">
+        <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+      </div>
+
       <!-- Modal Header -->
-      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0 flex justify-between items-center">
-        <h3 class="text-lg font-semibold text-white">Pending Orders - Assign Assistant</h3>
-        <button (click)="closePendingOrdersModal()" 
-                class="text-white hover:text-gray-200 transition-colors duration-200">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                  d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 md:px-6 py-4 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <h3 class="text-base md:text-lg font-semibold text-white leading-6">Pending Orders - Assign Assistant</h3>
+          <button (click)="closePendingOrdersModal()" 
+                  class="text-white hover:text-gray-200 transition-colors duration-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                    d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      <!-- Modal Body -->
-      <div class="p-6 overflow-y-auto" style="max-height: calc(90vh - 140px);">
-        <ag-grid-angular
-          class="ag-theme-alpine"
-          style="height: calc(90vh - 200px); width: 100%;"
-          [rowData]="pendingOrders"
-          [columnDefs]="pendingOrdersColumnDefs"
-          [defaultColDef]="defaultColDef"
-          [pagination]="true"
-          [paginationPageSize]="10"
-          [paginationPageSizeSelector]="[10, 25, 50]"
-          [domLayout]="'normal'"
-          [suppressRowClickSelection]="true"
-          [rowSelection]="'multiple'"
-          [animateRows]="true"
-          [suppressMenuHide]="true"
-          (gridReady)="onPendingGridReady($event)"
-        ></ag-grid-angular>
+      <!-- Modal Body - Scrollable -->
+      <div class="flex-1 overflow-y-auto p-4 md:p-6">
+        <!-- No Pending Orders -->
+        <div *ngIf="pendingOrders.length === 0" class="flex items-center justify-center h-64">
+          <div class="text-center text-gray-500">
+            <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <p class="text-sm font-medium">No pending orders</p>
+            <p class="text-xs text-gray-400 mt-1">All orders have been assigned</p>
+          </div>
+        </div>
+
+        <!-- Pending Orders Cards -->
+        <div class="space-y-3">
+          <div *ngFor="let order of pendingOrders" 
+               class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
+            <div class="p-4">
+              <!-- Card Header -->
+              <div class="flex justify-between items-start mb-3">
+                <div class="flex-1">
+                  <div class="flex items-center gap-2 mb-1">
+                    <span class="text-base font-semibold text-gray-900">{{ order.orderNo }}</span>
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                      Pending
+                    </span>
+                  </div>
+                  <p class="text-sm text-gray-600">{{ order.doctorName }}</p>
+                </div>
+                <button 
+                  (click)="viewPendingOrderDetails(order)"
+                  class="flex items-center justify-center text-blue-600 hover:text-blue-900 p-2 hover:bg-blue-50 rounded transition-colors duration-200"
+                  title="View Details"
+                >
+                  <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 640 640">
+                    <path d="M320 64c-103.6 0-192.5 62.8-231.8 152.8C49.4 304.9 0 374.3 0 456c0 114.9 93.1 208 208 208h224c123.7 0 224-100.3 224-224 0-109.8-79-201.2-183.2-220.2C448.2 132.4 390.5 64 320 64zm0 64c44.2 0 80 35.8 80 80s-35.8 80-80 80-80-35.8-80-80 35.8-80 80-80z"/>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Card Body -->
+              <div class="space-y-2 mb-3">
+                <!-- Hospital -->
+                <div class="flex items-center text-sm">
+                  <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  <span class="text-gray-600">{{ order.hospitalName || 'N/A' }}</span>
+                </div>
+
+                <!-- Operation Date/Time -->
+                <div class="flex items-center text-sm">
+                  <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span class="text-gray-600">
+                    {{ order.operationDate }} {{ order.operationTime }}
+                  </span>
+                </div>
+
+                <!-- Material Send Date -->
+                <div class="flex items-center text-sm">
+                  <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                  </svg>
+                  <span class="text-gray-600">
+                    Material: {{ order.materialSendDate || 'Not set' }}
+                  </span>
+                </div>
+
+                <!-- Remarks -->
+                <div *ngIf="order.remarks" class="flex items-start text-sm">
+                  <svg class="w-4 h-4 mr-2 mt-0.5 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                  <span class="text-gray-600 line-clamp-2">{{ order.remarks }}</span>
+                </div>
+              </div>
+
+              <!-- Assign Button -->
+              <button 
+                (click)="openAssignModalFromGrid(order)"
+                class="w-full px-4 py-2.5 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors duration-200 flex items-center justify-center"
+              >
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Assign Assistant
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Modal Footer -->
-      <div class="bg-gray-50 px-6 py-4 flex justify-end">
+      <!-- Modal Footer - Sticky -->
+      <div class="bg-gray-50 px-4 md:px-6 py-4 border-t border-gray-200 flex-shrink-0">
         <button 
           (click)="closePendingOrdersModal()"
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+          class="w-full md:w-auto px-4 py-3 md:py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
         >
           Close
         </button>
@@ -332,21 +488,29 @@
     </div>
   </div>
 
-  <!-- Assign Assistant Modal (from Grid) -->
-  <div *ngIf="assignModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-30 z-[70] flex items-center justify-center p-4">
-    <div class="bg-white rounded-xl shadow-xl w-full max-w-5xl">
-      <!-- Header -->
-      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 rounded-t-xl flex justify-between items-center">
-        <h3 class="text-lg font-semibold text-white">Assign Assistant</h3>
-        <button (click)="closeAssignModalFromGrid()" class="text-white hover:text-gray-200">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+  <!-- Assign Assistant Modal (from Grid) - Mobile Bottom Sheet Style -->
+  <div *ngIf="assignModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-[70] flex items-end md:items-center justify-center md:p-4" (click)="closeAssignModalFromGrid()">
+    <div class="relative w-full md:max-w-5xl bg-white rounded-t-3xl md:rounded-xl shadow-2xl overflow-hidden animate-slide-up max-h-[95vh] flex flex-col" (click)="$event.stopPropagation()">
+      <!-- Drag Handle (Mobile Only) -->
+      <div class="flex md:hidden justify-center py-3 flex-shrink-0">
+        <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
       </div>
 
-      <!-- Body - Two Column Layout -->
-      <div class="p-6 grid grid-cols-2 gap-6">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 md:px-6 py-4 flex-shrink-0">
+        <div class="flex justify-between items-center">
+          <h3 class="text-base md:text-lg font-semibold text-white">Assign Assistant</h3>
+          <button (click)="closeAssignModalFromGrid()" class="text-white hover:text-gray-200 transition-colors duration-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Body - Responsive Layout -->
+      <div class="flex-1 overflow-y-auto p-4 md:p-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
         <!-- Left Column - Assignment Form -->
         <div class="space-y-4">
           <div *ngIf="assigningOrder" class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
@@ -412,7 +576,7 @@
         </div>
 
         <!-- Right Column - Existing Assignments -->
-        <div class="border-l border-gray-200 pl-6">
+        <div class="md:border-l border-gray-200 md:pl-6 pt-4 md:pt-0 border-t md:border-t-0 border-gray-200">
           <div class="text-sm font-semibold text-gray-800 mb-3">
             Existing Assignments
             <span *ngIf="assignmentData.reportingDate" class="text-xs font-normal text-gray-600 ml-2">
@@ -490,21 +654,110 @@
             </div>
           </div>
         </div>
+        </div>
       </div>
 
       <!-- Footer -->
-      <div class="bg-gray-50 px-6 py-4 rounded-b-xl flex justify-end space-x-3 border-t border-gray-200">
+      <div class="bg-gray-50 px-4 md:px-6 py-4 border-t border-gray-200 flex-shrink-0">
+        <div class="flex flex-col md:flex-row justify-end gap-3">
+          <button 
+            (click)="closeAssignModalFromGrid()" 
+            class="w-full md:w-auto px-4 py-3 md:py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+          >
+            Cancel
+          </button>
+          <button 
+            (click)="handleAssignAssistantFromGrid()" 
+            class="w-full md:w-auto px-4 py-3 md:py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors duration-200"
+          >
+            Assign
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Modal - Mobile Bottom Sheet Style -->
+  <div *ngIf="isFilterModalOpen" class="fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-end" (click)="closeFilterModal()">
+    <div class="relative w-full bg-white rounded-t-3xl shadow-2xl overflow-hidden animate-slide-up max-h-[85vh] flex flex-col" (click)="$event.stopPropagation()">
+      <!-- Drag Handle -->
+      <div class="flex justify-center py-3 flex-shrink-0">
+        <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+      </div>
+
+      <!-- Modal Header -->
+      <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-6 py-4 flex-shrink-0">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-white leading-6">Filter Assignments</h3>
+          <button 
+            (click)="closeFilterModal()" 
+            class="text-white hover:text-gray-200 transition-colors duration-200"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body - Scrollable -->
+      <div class="flex-1 overflow-y-auto p-6">
+        <div class="space-y-4">
+          <!-- Search Bar -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+            <div class="relative">
+              <input 
+                type="text" 
+                [(ngModel)]="searchText"
+                (ngModelChange)="applyFilters()"
+                placeholder="Search by order no, patient, assistant..."
+                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+
+          <!-- Status Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+            <select 
+              [(ngModel)]="filterStatus"
+              (ngModelChange)="applyFilters()"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+            >
+              <option value="">All Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Assigned">Assigned</option>
+            </select>
+          </div>
+
+          <!-- Sort By -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+            <select 
+              [(ngModel)]="sortBy"
+              (ngModelChange)="applyFilters()"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+            >
+              <option value="orderNo">Order No</option>
+              <option value="operationDate">Operation Date</option>
+              <option value="assistantName">Assistant</option>
+              <option value="status">Status</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer - Sticky -->
+      <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex-shrink-0">
         <button 
-          (click)="closeAssignModalFromGrid()" 
-          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+          (click)="closeFilterModal()"
+          class="w-full px-4 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
         >
-          Cancel
-        </button>
-        <button 
-          (click)="handleAssignAssistantFromGrid()" 
-          class="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors duration-200"
-        >
-          Assign
+          Apply Filters
         </button>
       </div>
     </div>
