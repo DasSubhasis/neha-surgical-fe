@@ -69,6 +69,7 @@ export class HospitalComponent implements OnInit {
     mobile: '',
     email: '',
     location: '',
+    department: '',
     remarks: ''
   };
 
@@ -270,7 +271,7 @@ export class HospitalComponent implements OnInit {
       status: 'Active',
       isActive: 'Y'
     };
-    this.newContact = { name: '', mobile: '', email: '', location: '', remarks: '' };
+    this.newContact = { name: '', mobile: '', email: '', location: '', department: '', remarks: '' };
     this.isModalOpen = true;
     this.inlineMatches = [];
   }
@@ -286,7 +287,7 @@ export class HospitalComponent implements OnInit {
       status: hospital.status || 'Active',
       isActive: hospital.isActive || 'Y'
     };
-    this.newContact = { name: '', mobile: '', email: '', location: '', remarks: '' };
+    this.newContact = { name: '', mobile: '', email: '', location: '', department: '', remarks: '' };
     this.isModalOpen = true;
     this.inlineMatches = [];
   }
@@ -303,7 +304,7 @@ export class HospitalComponent implements OnInit {
       status: 'Active',
       isActive: 'Y'
     };
-    this.newContact = { name: '', mobile: '', email: '', location: '', remarks: '' };
+    this.newContact = { name: '', mobile: '', email: '', location: '', department: '', remarks: '' };
     this.inlineMatches = [];
   }
 
@@ -395,10 +396,11 @@ export class HospitalComponent implements OnInit {
       mobile: this.newContact.mobile,
       email: this.newContact.email?.trim() || '',
       location: this.newContact.location?.trim() || '',
+      department: this.newContact.department?.trim() || '',
       remarks: this.newContact.remarks?.trim() || ''
     });
 
-    this.newContact = { name: '', mobile: '', email: '', location: '', remarks: '' };
+    this.newContact = { name: '', mobile: '', email: '', location: '', department: '', remarks: '' };
   }
 
   removeContact(index: number): void {

@@ -22,6 +22,7 @@
     <!-- Header -->
     <app-header
       [email]="currentUser?.email || ''"
+      [userName]="currentUser?.fullName || currentUser?.name || ''"
       (logout)="logout()"
       (toggleSidebar)="toggleSidebar()"
       (navigate)="onNavigate($event)"

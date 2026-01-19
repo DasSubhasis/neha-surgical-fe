@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 })
 export class HeaderComponent {
   @Input() email: string = '';
+  @Input() userName: string = '';
   @Output() logout = new EventEmitter<void>();
   @Output() toggleSidebar = new EventEmitter<void>();
   @Output() navigate = new EventEmitter<string>();
@@ -16,6 +17,9 @@ export class HeaderComponent {
   avatarDropdownOpen: boolean = false;
 
   get userInitial(): string {
+    if (this.userName) {
+      return this.userName.charAt(0).toUpperCase();
+    }
     return this.email ? this.email.charAt(0).toUpperCase() : 'U';
   }
 

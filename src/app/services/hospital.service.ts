@@ -9,6 +9,7 @@ export interface HospitalContact {
   mobile: string;
   email: string;
   location: string;
+  department: string;
   remarks: string;
 }
 
