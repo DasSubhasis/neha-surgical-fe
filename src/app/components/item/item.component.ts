@@ -461,9 +461,8 @@ export class ItemComponent implements OnInit {
     return !this.formData.name?.trim() || 
            !this.formData.shortname?.trim() || 
            !this.formData.brandId || 
-           !this.formData.categoryId || 
-           this.formData.price == null || 
-           this.formData.price < 0;
+           !this.formData.categoryId ||
+           (this.formData.price != null && this.formData.price < 0);
   }
 
   isDuplicateItem(): boolean {
@@ -488,11 +487,21 @@ export class ItemComponent implements OnInit {
   handleSaveItem(): void {
     // Validation
     if (!this.formData.name?.trim() || !this.formData.shortname?.trim() || 
-        !this.formData.brandId || !this.formData.categoryId || 
-        this.formData.price == null || this.formData.price < 0) {
+        !this.formData.brandId || !this.formData.categoryId) {
       console.error('All required fields must be filled!');
       this.toastService.error('All required fields must be filled!');
       return;
+    }
+
+    // Validate price is not negative
+    if (this.formData.price != null && this.formData.price < 0) {
+      this.toastService.error('Price cannot be negative!');
+      return;
+    }
+
+    // Default price to 0 if empty or null
+    if (this.formData.price == null || this.formData.price === undefined) {
+      this.formData.price = 0;
     }
 
     // Check for duplicates
