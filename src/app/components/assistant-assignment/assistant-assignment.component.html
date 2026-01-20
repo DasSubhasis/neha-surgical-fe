@@ -7,8 +7,15 @@
         (navigate)="onBreadcrumbNavigate($event)"
       ></app-breadcrumb>
     </div>
-    <div class="flex items-center">
+    <div class="flex items-center relative">
       <app-action-dropdown [actions]="actionItems"></app-action-dropdown>
+      <!-- Active Filter Badge -->
+      <span 
+        *ngIf="getActiveFilterCount() > 0"
+        class="absolute -top-1 -right-1 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-indigo-600 rounded-full border-2 border-white"
+      >
+        {{ getActiveFilterCount() }}
+      </span>
     </div>
   </div>
 
@@ -91,6 +98,17 @@
 
             <!-- Card Body -->
             <div class="space-y-2">
+              <!-- Hospital Info -->
+              <div class="flex items-center text-sm">
+                <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                <span class="text-gray-600">
+                  <span class="font-medium">Hospital:</span> 
+                  {{ assignment.hospitalName || 'N/A' }}
+                </span>
+              </div>
+
               <!-- Assistant Info -->
               <div class="flex items-center text-sm">
                 <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -264,11 +282,11 @@
 
       <!-- Modal Header -->
       <div class="bg-gradient-to-r from-indigo-600 to-indigo-700 px-4 md:px-6 py-4 flex-shrink-0">
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-between mb-3">
           <h3 class="text-base md:text-lg font-semibold text-white leading-6">
             Pending Orders - Assign Assistant 
             <span class="ml-2 inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white bg-opacity-20 text-white">
-              {{ pendingOrders.length }} {{ pendingOrders.length === 1 ? 'Order' : 'Orders' }}
+              {{ filteredPendingOrders.length }} {{ filteredPendingOrders.length === 1 ? 'Order' : 'Orders' }}
             </span>
           </h3>
           <button (click)="closePendingOrdersModal()" 
@@ -279,12 +297,53 @@
             </svg>
           </button>
         </div>
+        
+        <!-- Filters -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div>
+            <input 
+              type="date"
+              [(ngModel)]="pendingOrderFilterDate"
+              (ngModelChange)="applyPendingOrderFilters()"
+              placeholder="Filter by operation date"
+              class="w-full px-3 py-2 text-sm border border-white border-opacity-30 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-70 rounded-lg focus:ring-2 focus:ring-white focus:ring-opacity-50 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <input 
+              type="text"
+              [(ngModel)]="pendingOrderFilterDoctor"
+              (ngModelChange)="applyPendingOrderFilters()"
+              placeholder="Filter by doctor name"
+              class="w-full px-3 py-2 text-sm border border-white border-opacity-30 bg-white bg-opacity-20 text-white placeholder-white placeholder-opacity-70 rounded-lg focus:ring-2 focus:ring-white focus:ring-opacity-50 focus:border-transparent"
+            />
+          </div>
+          <div>
+            <button
+              (click)="clearPendingOrderFilters()"
+              class="w-full px-3 py-2 text-sm font-medium text-white bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors duration-200 flex items-center justify-center"
+            >
+              <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+              Clear Filters
+            </button>
+          </div>
+        </div>
       </div>
 
       <!-- Modal Body - Scrollable -->
-      <div class="flex-1 overflow-y-auto p-4 md:p-6">
+      <div class="flex-1 overflow-y-auto p-4 md:p-6 relative">
+        <!-- Loading Overlay -->
+        <div *ngIf="pendingOrdersLoading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+          <div class="flex flex-col items-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+            <p class="mt-3 text-sm text-gray-600">Loading pending orders...</p>
+          </div>
+        </div>
+
         <!-- No Pending Orders -->
-        <div *ngIf="pendingOrders.length === 0" class="flex items-center justify-center h-64">
+        <div *ngIf="!pendingOrdersLoading && filteredPendingOrders.length === 0" class="flex items-center justify-center h-64">
           <div class="text-center text-gray-500">
             <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -295,8 +354,8 @@
         </div>
 
         <!-- Pending Orders Cards -->
-        <div class="space-y-3">
-          <div *ngFor="let order of pendingOrders" 
+        <div *ngIf="!pendingOrdersLoading" class="space-y-3">
+          <div *ngFor="let order of filteredPendingOrders" 
                class="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
             <div class="p-4">
               <!-- Card Header -->
@@ -703,63 +762,82 @@
 
       <!-- Modal Body - Scrollable -->
       <div class="flex-1 overflow-y-auto p-6">
-        <div class="space-y-4">
-          <!-- Search Bar -->
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
-            <div class="relative">
-              <input 
-                type="text" 
-                [(ngModel)]="searchText"
-                (ngModelChange)="applyFilters()"
-                placeholder="Search by order no, patient, assistant..."
-                class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              />
-              <svg class="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <!-- Active Filters Summary -->
+        <div *ngIf="getActiveFilterCount() > 0" class="mb-4 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
               </svg>
+              <span class="text-sm font-medium text-indigo-900">{{ getActiveFilterCount() }} filter(s) active</span>
             </div>
+            <button 
+              (click)="clearAllFilters()"
+              class="text-sm text-indigo-600 hover:text-indigo-800 font-medium underline"
+            >
+              Clear All
+            </button>
+          </div>
+          <div class="mt-2 text-xs text-indigo-700">
+            Showing {{ filteredAssignments.length }} of {{ assignments.length }} assignments
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Doctor Name Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Doctor Name</label>
+            <input 
+              type="text"
+              [(ngModel)]="filterDoctorName"
+              (ngModelChange)="applyFilters()"
+              placeholder="Search by doctor name"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
           </div>
 
-          <!-- Status Filter -->
+          <!-- Operation Date Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select 
-              [(ngModel)]="filterStatus"
+            <label class="block text-sm font-medium text-gray-700 mb-2">Operation Date</label>
+            <input 
+              type="date"
+              [(ngModel)]="filterOperationDate"
               (ngModelChange)="applyFilters()"
               class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-            >
-              <option value="">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Assigned">Assigned</option>
-            </select>
+            />
           </div>
 
-          <!-- Sort By -->
+          <!-- Assistant Name Filter -->
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
-            <select 
-              [(ngModel)]="sortBy"
+            <label class="block text-sm font-medium text-gray-700 mb-2">Assistant Name</label>
+            <input 
+              type="text"
+              [(ngModel)]="filterAssistantName"
               (ngModelChange)="applyFilters()"
-              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
-            >
-              <option value="orderNo">Order No</option>
-              <option value="operationDate">Operation Date</option>
-              <option value="assistantName">Assistant</option>
-              <option value="status">Status</option>
-            </select>
+              placeholder="Search by assistant name"
+              class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
           </div>
         </div>
       </div>
 
       <!-- Modal Footer - Sticky -->
       <div class="bg-gray-50 px-6 py-4 border-t border-gray-200 flex-shrink-0">
-        <button 
-          (click)="closeFilterModal()"
-          class="w-full px-4 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
-        >
-          Apply Filters
-        </button>
+        <div class="flex gap-3">
+          <button 
+            *ngIf="getActiveFilterCount() > 0"
+            (click)="clearAllFilters()"
+            class="flex-1 px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+          >
+            Clear Filters
+          </button>
+          <button 
+            (click)="closeFilterModal()"
+            class="flex-1 px-4 py-3 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+          >
+            Apply ({{ filteredAssignments.length }})
+          </button>
+        </div>
       </div>
     </div>
   </div>

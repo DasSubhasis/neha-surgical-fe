@@ -51,9 +51,9 @@ export class AssistantAssignmentComponent implements OnInit {
   loading: boolean = false;
 
   // Filter properties
-  searchText: string = '';
-  filterStatus: string = '';
-  sortBy: string = 'orderNo';
+  filterDoctorName: string = '';
+  filterOperationDate: string = '';
+  filterAssistantName: string = '';
 
   // Error state
   errorMessage: string = '';
@@ -67,6 +67,10 @@ export class AssistantAssignmentComponent implements OnInit {
 
   // Pending orders for assignment
   pendingOrders: Order[] = [];
+  filteredPendingOrders: Order[] = [];
+  pendingOrdersLoading: boolean = false;
+  pendingOrderFilterDate: string = '';
+  pendingOrderFilterDoctor: string = '';
   viewPendingOrder: Order | null = null;
   viewPendingOrderLoading: boolean = false;
 
@@ -206,39 +210,47 @@ export class AssistantAssignmentComponent implements OnInit {
   applyFilters(): void {
     let filtered = [...this.assignments];
 
-    // Apply search filter
-    if (this.searchText.trim()) {
-      const search = this.searchText.toLowerCase();
+    // Filter by doctor name
+    if (this.filterDoctorName.trim()) {
+      const search = this.filterDoctorName.toLowerCase();
       filtered = filtered.filter(assignment =>
-        assignment.orderNo?.toLowerCase().includes(search) ||
-        assignment.patient?.toLowerCase().includes(search) ||
-        assignment.assistantName?.toLowerCase().includes(search) ||
-        assignment.remarks?.toLowerCase().includes(search)
+        assignment.doctorName?.toLowerCase().includes(search)
       );
     }
 
-    // Apply status filter
-    if (this.filterStatus) {
-      filtered = filtered.filter(assignment => assignment.status === this.filterStatus);
+    // Filter by operation date
+    if (this.filterOperationDate) {
+      filtered = filtered.filter(assignment => 
+        assignment.operationDate === this.filterOperationDate
+      );
     }
 
-    // Apply sorting
-    filtered.sort((a, b) => {
-      let aValue: any = a[this.sortBy as keyof AssistantAssignment];
-      let bValue: any = b[this.sortBy as keyof AssistantAssignment];
-
-      // Handle null/undefined values
-      if (aValue == null) aValue = '';
-      if (bValue == null) bValue = '';
-
-      // Convert to string for comparison
-      aValue = String(aValue).toLowerCase();
-      bValue = String(bValue).toLowerCase();
-
-      return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-    });
+    // Filter by assistant name
+    if (this.filterAssistantName.trim()) {
+      const search = this.filterAssistantName.toLowerCase();
+      filtered = filtered.filter(assignment =>
+        assignment.assistantName?.toLowerCase().includes(search)
+      );
+    }
 
     this.filteredAssignments = filtered;
+  }
+
+  // Get count of active filters
+  getActiveFilterCount(): number {
+    let count = 0;
+    if (this.filterDoctorName.trim()) count++;
+    if (this.filterOperationDate) count++;
+    if (this.filterAssistantName.trim()) count++;
+    return count;
+  }
+
+  // Clear all filters
+  clearAllFilters(): void {
+    this.filterDoctorName = '';
+    this.filterOperationDate = '';
+    this.filterAssistantName = '';
+    this.applyFilters();
   }
 
   retryFetch(): void {
@@ -261,11 +273,15 @@ export class AssistantAssignmentComponent implements OnInit {
   closePendingOrdersModal(): void {
     this.isPendingOrdersModalOpen = false;
     this.pendingOrders = [];
+    this.filteredPendingOrders = [];
+    this.pendingOrderFilterDate = '';
+    this.pendingOrderFilterDoctor = '';
     this.viewPendingOrder = null;
   }
 
   fetchPendingOrders(): void {
     // Fetch only pending orders for the modal grid
+    this.pendingOrdersLoading = true;
     this.assistantAssignmentService.getAssignments('Pending').subscribe({
       next: (data) => {
         // Filter to ensure we only show pending (unassigned) orders
@@ -287,8 +303,12 @@ export class AssistantAssignmentComponent implements OnInit {
           createdBy: '',
           audits: []
         }));
+        this.filteredPendingOrders = [...this.pendingOrders];
+        this.applyPendingOrderFilters();
+        this.pendingOrdersLoading = false;
       },
       error: (error) => {
+        this.pendingOrdersLoading = false;
         console.error('Error fetching pending orders:', error);
         this.pendingOrders = [];
       }
@@ -435,6 +455,31 @@ export class AssistantAssignmentComponent implements OnInit {
         this.toastService.error('Failed to assign assistant');
       }
     });
+  }
+
+  applyPendingOrderFilters(): void {
+    let filtered = [...this.pendingOrders];
+
+    // Filter by operation date
+    if (this.pendingOrderFilterDate) {
+      filtered = filtered.filter(order => order.operationDate === this.pendingOrderFilterDate);
+    }
+
+    // Filter by doctor name
+    if (this.pendingOrderFilterDoctor) {
+      const searchTerm = this.pendingOrderFilterDoctor.toLowerCase();
+      filtered = filtered.filter(order => 
+        order.doctorName?.toLowerCase().includes(searchTerm)
+      );
+    }
+
+    this.filteredPendingOrders = filtered;
+  }
+
+  clearPendingOrderFilters(): void {
+    this.pendingOrderFilterDate = '';
+    this.pendingOrderFilterDoctor = '';
+    this.applyPendingOrderFilters();
   }
 
   formatDate(dateString: string): string {
