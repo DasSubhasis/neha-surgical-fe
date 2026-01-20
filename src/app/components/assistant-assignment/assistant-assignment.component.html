@@ -66,7 +66,7 @@
             <div class="flex justify-between items-start mb-3">
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-1">
-                  <h3 class="text-base font-semibold text-gray-900">{{ assignment.orderNo }}</h3>
+                  <h3 class="text-base font-semibold text-gray-900">{{ assignment.doctorName }}</h3>
                   <span 
                     class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
                     [class.bg-gray-100]="assignment.status === 'Pending'"
@@ -76,8 +76,7 @@
                   >
                     {{ assignment.status }}
                   </span>
-                </div>
-                <p class="text-sm text-gray-600">{{ assignment.patient }}</p>
+                </div>                
               </div>
               <button 
                 (click)="viewOrderDetails(assignment.id)"
@@ -109,8 +108,8 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span class="text-gray-600">
-                  <span class="font-medium">Operation:</span> 
-                  {{ assignment.operationDate }} {{ assignment.operationTime }}
+                  <span class="font-medium">Operation Date:</span> 
+                  {{ assignment.operationDate | date:'dd-MMM-yyyy' }} at {{ formatTime(assignment.operationTime) }}
                 </span>
               </div>
 
@@ -121,7 +120,7 @@
                 </svg>
                 <span class="text-gray-600">
                   <span class="font-medium">Reporting:</span> 
-                  {{ assignment.reportingTime }}
+                  {{ formatTime(assignment.reportingTime) }}
                 </span>
               </div>
 
@@ -171,25 +170,36 @@
       <div class="p-6 relative">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Order No</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewRow.orderNo }}</div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Doctor</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewRow.doctorName || '—' }}</div>
           </div>
           <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Patient</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewRow.patient }}</div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Hospital</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewRow.hospitalName || '—' }}</div>
           </div>
 
           <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Operation</div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Operation Date</div>
             <div class="text-sm font-normal text-gray-800">
-              {{ viewRow.operationDate }} {{ viewRow.operationTime }}
+              {{ viewRow.operationDate | date:'dd-MMM-yyyy' }}
             </div>
           </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Operation Time</div>
+            <div class="text-sm font-normal text-gray-800">
+              {{ formatTime(viewRow.operationTime) }}
+            </div>
+          </div>
+
           <div>
             <div class="text-xs font-bold text-indigo-800 mb-1">Assistant</div>
             <div class="text-sm font-normal text-gray-800">
               {{ viewRow.assistantName || 'Unassigned' }}
             </div>
+          </div>
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Patient</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewRow.patient || '—' }}</div>
           </div>
 
           <div class="md:col-span-2">
@@ -293,12 +303,12 @@
               <div class="flex justify-between items-start mb-3">
                 <div class="flex-1">
                   <div class="flex items-center gap-2 mb-1">
-                    <span class="text-base font-semibold text-gray-900">{{ order.orderNo }}</span>
+                    <span class="text-base font-semibold text-gray-900">{{ order.doctorName }}</span>
                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                       Pending
                     </span>
                   </div>
-                  <p class="text-sm text-gray-600">{{ order.doctorName }}</p>
+                  <p class="text-sm text-gray-600">{{ order.operationDate | date:'dd-MMM-yyyy' }} at {{ formatTime(order.operationTime) }}</p>
                 </div>
                 <button 
                   (click)="viewPendingOrderDetails(order)"
@@ -306,7 +316,7 @@
                   title="View Details"
                 >
                   <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 640 640">
-                    <path d="M320 64c-103.6 0-192.5 62.8-231.8 152.8C49.4 304.9 0 374.3 0 456c0 114.9 93.1 208 208 208h224c123.7 0 224-100.3 224-224 0-109.8-79-201.2-183.2-220.2C448.2 132.4 390.5 64 320 64zm0 64c44.2 0 80 35.8 80 80s-35.8 80-80 80-80-35.8-80-80 35.8-80 80-80z"/>
+                    <path d="M320 96C239.2 96 174.5 132.8 127.4 176.6C80.6 220.1 49.3 272 34.4 307.7C31.1 315.6 31.1 324.4 34.4 332.3C49.3 368 80.6 420 127.4 463.4C174.5 507.1 239.2 544 320 544C400.8 544 465.5 507.2 512.6 463.4C559.4 419.9 590.7 368 605.6 332.3C608.9 324.4 608.9 315.6 605.6 307.7C590.7 272 559.4 220 512.6 176.6C465.5 132.9 400.8 96 320 96zM176 320C176 240.5 240.5 176 320 176C399.5 176 464 240.5 464 320C464 399.5 399.5 464 320 464C240.5 464 176 399.5 176 320zM320 256C320 291.3 291.3 320 256 320C244.5 320 233.7 317 224.3 311.6C223.3 322.5 224.2 333.7 227.2 344.8C240.9 396 293.6 426.4 344.8 412.7C396 399 426.4 346.3 412.7 295.1C400.5 249.4 357.2 220.3 311.6 224.3C316.9 233.6 320 244.4 320 256z" />
                   </svg>
                 </button>
               </div>
@@ -319,16 +329,6 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                   <span class="text-gray-600">{{ order.hospitalName || 'N/A' }}</span>
-                </div>
-
-                <!-- Operation Date/Time -->
-                <div class="flex items-center text-sm">
-                  <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span class="text-gray-600">
-                    {{ order.operationDate }} {{ order.operationTime }}
-                  </span>
                 </div>
 
                 <!-- Material Send Date -->
@@ -407,15 +407,6 @@
       <div class="p-6 relative">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Order No</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.orderNo }}</div>
-          </div>
-          <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Order Date</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.orderDate }}</div>
-          </div>
-
-          <div>
             <div class="text-xs font-bold text-indigo-800 mb-1">Doctor</div>
             <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.doctorName || '—' }}</div>
           </div>
@@ -426,16 +417,21 @@
 
           <div>
             <div class="text-xs font-bold text-indigo-800 mb-1">Operation Date</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.operationDate }}</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.operationDate | date:'dd-MMM-yyyy' }}</div>
           </div>
           <div>
             <div class="text-xs font-bold text-indigo-800 mb-1">Operation Time</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.operationTime }}</div>
+            <div class="text-sm font-normal text-gray-800">{{ formatTime(viewPendingOrder.operationTime) }}</div>
+          </div>
+
+          <div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Order Date</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.orderDate | date:'dd-MMM-yyyy' }}</div>
           </div>
 
           <div>
             <div class="text-xs font-bold text-indigo-800 mb-1">Material Send Date</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.materialSendDate }}</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewPendingOrder.materialSendDate | date:'dd-MMM-yyyy' }}</div>
           </div>
           <div>
             <div class="text-xs font-bold text-indigo-800 mb-1">Status</div>
@@ -521,7 +517,7 @@
           <div *ngIf="assigningOrder" class="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
             <div class="text-xs font-semibold text-indigo-800 mb-1">Order Details</div>
             <div class="text-sm text-gray-700">
-              <span class="font-medium">{{ assigningOrder.orderNo }}</span> - {{ assigningOrder.doctorName }}
+              <span class="font-medium">{{ assigningOrder.doctorName }}</span>
             </div>
             <div class="text-xs text-gray-600 mt-1">
               Operation: {{ formatDate(assigningOrder.operationDate) }} {{ assigningOrder.operationTime }}
@@ -615,7 +611,7 @@
           <div *ngIf="existingAssignments.length > 0" class="space-y-2 max-h-80 overflow-y-auto pr-2">
             <div *ngFor="let assignment of existingAssignments" class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 hover:bg-yellow-100 transition-colors">
               <div class="flex justify-between items-start mb-2">
-                <div class="text-sm font-semibold text-gray-800">{{ assignment.orderNo }}</div>
+                <div class="text-sm font-semibold text-gray-800">{{ assignment.doctorName }}</div>
                 <div class="text-xs text-yellow-700 bg-yellow-200 px-2 py-1 rounded">Assigned</div>
               </div>
               <div class="space-y-1">

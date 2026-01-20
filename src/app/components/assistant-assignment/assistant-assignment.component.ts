@@ -445,7 +445,25 @@ export class AssistantAssignmentComponent implements OnInit {
 
   formatTime(timeString: string): string {
     if (!timeString) return '';
-    return timeString;
+    
+    // If already in 12-hour format with AM/PM, return as-is
+    if (timeString.toLowerCase().includes('am') || timeString.toLowerCase().includes('pm')) {
+      return timeString;
+    }
+    
+    // Parse 24-hour format (HH:mm or HH:mm:ss)
+    const timeParts = timeString.split(':');
+    if (timeParts.length < 2) return timeString;
+    
+    let hours = parseInt(timeParts[0], 10);
+    const minutes = timeParts[1];
+    
+    if (isNaN(hours)) return timeString;
+    
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12; // Convert 0 to 12 for midnight, and 13-23 to 1-11
+    
+    return `${hours}:${minutes} ${period}`;
   }
 
   getCurrentDate(): string {
