@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
 import { ApiService, ApiResponse } from './api.service';
+import { AuthService } from './auth.service';
 import { ENDPOINTS } from '../config/api.config';
 
 export interface Coordinates {
@@ -198,20 +199,32 @@ export class AssistantOperationsService {
     );
   }
 
-  // Get all assistants
+  // Get all assistants (all non-admin users except logged-in user)
   getAssistants(): Observable<Assistant[]> {
     console.log('Fetching assistants...');
-    return this.apiService.get<any>(ENDPOINTS.ASSISTANT_ASSIGNMENTS.ASSISTANTS).pipe(
+    return this.apiService.get<ApiResponse<any[]>>('/Users/non-admin?isActive=Y').pipe(
       map(response => {
         console.log('Assistants raw response:', response);
-        // Handle both wrapped responses and direct data
-        const data = response?.data || response || [];
+        const users = response.data || [];
         
-        // Map to Assistant interface
-        return data.map((assistant: any) => ({
-          id: assistant.systemUserId || assistant.id,
-          name: assistant.fullName || assistant.name
-        }));
+        // Get current user ID from localStorage
+        const currentUserId = parseInt(localStorage.getItem('userId') || '0');
+        
+        // Filter out the logged-in user and map to Assistant interface
+        return users
+          .filter(user => user.userId !== currentUserId)
+          .map((user: any) => {
+            // Create combined display name: fullName - employeeId - identifier
+            const nameParts = [user.fullName];
+            if (user.employeeId) nameParts.push(user.employeeId);
+            if (user.identifier) nameParts.push(user.identifier);
+            const displayName = nameParts.join(' - ');
+
+            return {
+              id: user.userId,
+              name: displayName
+            };
+          });
       })
     );
   }

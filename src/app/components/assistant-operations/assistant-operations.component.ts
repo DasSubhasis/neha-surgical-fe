@@ -2,6 +2,8 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { forkJoin, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 import { 
   AssistantOperationsService, 
   AssistantOrder, 
@@ -10,9 +12,12 @@ import {
   AssignAssistantFormData,
   Coordinates,
   TimelineEntry,
-  OrderDetail
+  OrderDetail,
+  OrderItem
 } from '../../services/assistant-operations.service';
 import { SubAssistantAssignmentService, SubAssistantAssignment, SubAssistantAssignmentFormData } from '../../services/sub-assistant-assignment.service';
+import { ItemGroupService } from '../../services/item-group.service';
+import { ItemService } from '../../services/item.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
@@ -50,11 +55,13 @@ export class AssistantOperationsComponent implements OnInit {
   
   viewRow: AssistantOrder | null = null;
   fullOrderDetails: OrderDetail | null = null;
+  itemsSummary: any[] = [];
   isViewModalOpen = false;
   isProcessModalOpen = false;
   processOrderRow: AssistantOrder | null = null;
   isAssignModalOpen = false;
   isFilterModalOpen = false;
+  expandedGroups: Map<string, boolean> = new Map();
   assignForm: AssignAssistantFormData = {
     orderId: 0,
     assistantId: 0,
@@ -111,6 +118,8 @@ export class AssistantOperationsComponent implements OnInit {
   constructor(
     private assistantOpsService: AssistantOperationsService,
     private subAssistantService: SubAssistantAssignmentService,
+    private itemGroupService: ItemGroupService,
+    private itemService: ItemService,
     private toastService: ToastService,
     private router: Router,
     private cdr: ChangeDetectorRef,
@@ -586,12 +595,91 @@ export class AssistantOperationsComponent implements OnInit {
   viewOrderDetails(order: AssistantOrder): void {
     this.viewRow = order;
     this.fullOrderDetails = null;
+    this.itemsSummary = [];
     this.isViewModalOpen = true;
     
     // Fetch full order details from API
     this.assistantOpsService.getOrderDetails(order.id).subscribe({
       next: (details) => {
+        console.log('Full order details received:', details);
         this.fullOrderDetails = details;
+        
+        // Build items summary with groups and their items (same as material-transfer)
+        if (details.itemGroups && details.itemGroups.length > 0) {
+          // Fetch all item groups to get their IDs
+          this.itemGroupService.getAllItemGroups('Y').subscribe({
+            next: (allGroups: any[]) => {
+              // Create requests to fetch items for each group
+              const groupItemRequests = details.itemGroups.map(groupName => {
+                const matchingGroup = allGroups.find((g: any) => g.name === groupName);
+                if (matchingGroup) {
+                  return this.itemService.getItemsByItemGroup(matchingGroup.itemGroupId).pipe(
+                    map((items: any[]) => ({
+                      groupName,
+                      items: items.map((item: any) => ({
+                        id: String(item.itemId),
+                        name: item.name,
+                        manual: false,
+                        isGroup: false
+                      }))
+                    })),
+                    catchError(() => of({ groupName, items: [] }))
+                  );
+                }
+                return of({ groupName, items: [] });
+              });
+
+              // Wait for all group items to be fetched
+              if (groupItemRequests.length > 0) {
+                forkJoin(groupItemRequests).subscribe({
+                  next: (groupsWithItems) => {
+                    // Build the items summary with groups and their items
+                    const groupedItems = groupsWithItems.map(gwi => ({
+                      id: '',
+                      name: gwi.groupName,
+                      manual: false,
+                      isGroup: true,
+                      items: gwi.items
+                    }));
+
+                    // Add manual items as standalone (items not in groups)
+                    const standaloneItems = (details.items || []).filter(item => item.manual);
+
+                    // Combine groups and standalone items
+                    this.itemsSummary = [...groupedItems, ...standaloneItems];
+                    console.log('Items summary built:', this.itemsSummary);
+                  },
+                  error: (error: any) => {
+                    console.error('Error fetching group items:', error);
+                    // Fallback: show groups without items
+                    const fallbackSummary = [
+                      ...(details.itemGroups || []).map(groupName => ({
+                        id: '',
+                        name: groupName,
+                        manual: false,
+                        isGroup: true,
+                        items: []
+                      })),
+                      ...(details.items || []).filter(item => item.manual)
+                    ];
+                    this.itemsSummary = fallbackSummary;
+                  }
+                });
+              } else {
+                // No groups, just show manual items
+                this.itemsSummary = (details.items || []).filter(item => item.manual);
+              }
+            },
+            error: (error: any) => {
+              console.error('Error fetching item groups:', error);
+              // Fallback without fetching items
+              this.itemsSummary = (details.items || []).filter(item => item.manual);
+            }
+          });
+        } else {
+          // No groups, just show manual items
+          this.itemsSummary = (details.items || []).filter(item => item.manual);
+        }
       },
       error: (error) => {
         console.error('Error fetching order details:', error);
@@ -654,7 +742,9 @@ export class AssistantOperationsComponent implements OnInit {
   closeViewModal(): void {
     this.viewRow = null;
     this.fullOrderDetails = null;
+    this.itemsSummary = [];
     this.isViewModalOpen = false;
+    this.expandedGroups.clear(); // Reset expanded state
   }
 
   // Close process modal
@@ -701,11 +791,16 @@ export class AssistantOperationsComponent implements OnInit {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const month = monthNames[d.getMonth()];
     const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, '0');
+    const hours24 = d.getHours();
+    const hours = String(hours24).padStart(2, '0');
     const minutes = String(d.getMinutes()).padStart(2, '0');
     
     if (format === 'DD MMM YYYY') {
       return `${day} ${month} ${year}`;
+    } else if (format === 'DD-MMM-YYYY hh:mm AM/PM') {
+      const ampm = hours24 >= 12 ? 'PM' : 'AM';
+      const displayHours = hours24 % 12 || 12;
+      return `${day}-${month}-${year} ${displayHours}:${minutes} ${ampm}`;
     } else if (format === 'HH:mm') {
       return `${hours}:${minutes}`;
     } else if (format === 'YYYY-MM-DD HH:mm:ss') {
@@ -718,6 +813,34 @@ export class AssistantOperationsComponent implements OnInit {
   // Get current timestamp
   getCurrentTimestamp(): string {
     return this.formatDateTime(new Date().toISOString(), 'YYYY-MM-DD HH:mm:ss');
+  }
+
+  // Format operation date and time together
+  formatOperationDateTime(dateStr: string, timeStr?: string): string {
+    if (!dateStr) return '';
+    
+    try {
+      const date = new Date(dateStr);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      
+      if (timeStr) {
+        // Parse time string (assuming HH:mm format)
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        
+        return `${day}-${month}-${year} ${String(displayHours).padStart(2, '0')}:${displayMinutes} ${ampm}`;
+      }
+      
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      return dateStr;
+    }
   }
 
   // ============ Sub-Assistant Assignment Methods ============
@@ -776,12 +899,6 @@ export class AssistantOperationsComponent implements OnInit {
   assignSubAssistant(): void {
     if (!this.subAssignForm.subAssistantId) {
       this.toastService.error('Please select a sub-assistant');
-      return;
-    }
-
-    // Prevent assigning the same person as both main and sub-assistant
-    if (this.selectedOrderForSubAssign?.assignedAssistantId === this.subAssignForm.subAssistantId) {
-      this.toastService.error('Cannot assign the main assistant as a sub-assistant');
       return;
     }
 
@@ -854,6 +971,30 @@ export class AssistantOperationsComponent implements OnInit {
     return this.assistants.filter(
       assistant => assistant.id !== this.selectedOrderForSubAssign?.assignedAssistantId
     );
+  }
+
+  // Toggle group expansion
+  toggleGroup(groupName: string): void {
+    const isExpanded = this.expandedGroups.get(groupName) || false;
+    this.expandedGroups.set(groupName, !isExpanded);
+  }
+
+  isGroupExpanded(groupName: string): boolean {
+    return this.expandedGroups.get(groupName) || false;
+  }
+
+  getGroupItems(item: any): any[] {
+    // Return items array from the group object (same as material-transfer)
+    return item.items || [];
+  }
+
+  getIndividualItems(): any[] {
+    // Return items that don't belong to any group (not isGroup items)
+    return this.itemsSummary.filter(item => !item.isGroup);
+  }
+
+  hasItemGroups(): boolean {
+    return this.itemsSummary && this.itemsSummary.some((item: any) => item.isGroup);
   }
 }
 
