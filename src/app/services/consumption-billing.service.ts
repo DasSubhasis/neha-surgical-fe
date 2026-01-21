@@ -79,6 +79,7 @@ export interface Order {
   status: string;
   isDelivered: string;
   audits: AuditEntry[];
+  materialDelivery?: MaterialDelivery;
   // Additional fields for consumption/billing
   consumptionRecords?: ConsumptionRecord[];
   billingRecords?: BillingRecord[];
@@ -99,6 +100,14 @@ export interface AuditEntry {
   action: string;
 }
 
+export interface MaterialDelivery {
+  deliveryStatus: string;
+  actualDeliveryBy: string;
+  actualDeliveryByUserId: number;
+  actualDeliveryTime: string;
+  remarks: string;
+}
+
 export interface ConsumedItemRequest {
   id: string;
   name: string;
@@ -111,6 +120,7 @@ export interface ConsumptionRequest {
   itemGroupId: number;
   itemGroupName: string;
   consumedItems: ConsumedItemRequest[];
+  images?: string[];
   createdBy: string;
 }
 

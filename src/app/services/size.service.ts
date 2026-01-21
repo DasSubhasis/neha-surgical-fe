@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService, ApiResponse } from './api.service';
 
 export interface Size {
@@ -39,7 +40,9 @@ export class SizeService {
    */
   getAllSizes(isActive: string = 'Y'): Observable<Size[]> {
     const endpoint = `/Sizes${isActive ? `?isActive=Y` : ''}`;
-    return this.apiService.get<Size[]>(endpoint);
+    return this.apiService.get<ApiResponse<Size[]>>(endpoint).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**

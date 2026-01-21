@@ -104,45 +104,44 @@ export class SidebarComponent implements OnInit {
         { 
           key: 'order-entry', 
           label: 'Order Entry', 
-          icon: 'plus-circle',
-          allowedRoles: [ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN] // Only Admin and Manager
+          icon: 'plus-circle'
         },
         { 
           key: 'assistant-assignment', 
           label: 'Assistant Assignment', 
-          icon: 'handshake',
-          allowedRoles: [ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN] // Only Admin and Manager
+          icon: 'handshake'
         },
         { 
           key: 'material-transfer', 
           label: 'Material Send', 
-          icon: 'truck',
-          allowedRoles: [ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN] // Only Admin and Manager
+          icon: 'truck'
         },
         { 
           key: 'material-delivery', 
           label: 'Material Delivery', 
-          icon: 'shipping-fast',
-          allowedRoles: [ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN,ROLE_IDS.DELIVERY] // Only Admin and Manager
+          icon: 'shipping-fast'
         },
         { 
           key: 'assistant-operations', 
           label: 'Assistant Operations', 
-          icon: 'hospital-user' ,
-          allowedRoles: [ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN,ROLE_IDS.FIELD_ASSISTANT]
+          icon: 'hospital-user'
         },
         { 
           key: 'consumption-billing', 
           label: 'Consumption & Billing', 
-          icon: 'file-invoice',
-          allowedRoles: [ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN,ROLE_IDS.FIELD_ASSISTANT] // Only Admin and Manager
+          icon: 'file-invoice'
+        },
+        { 
+          key: 'payment-collection', 
+          label: 'Payment Collection', 
+          icon: 'wallet'
         },
       ]
     },
     {
       key: 'settings', 
       label: 'Settings', 
-      icon: 'user-cog',      
+      icon: 'user-cog',
       submenu: [
         { key: 'user', label: 'User', icon: 'users' , allowedRoles: [ROLE_IDS.SUPER_ADMIN, ROLE_IDS.ADMIN]},
         { key: 'role', label: 'Role', icon: 'shield', allowedRoles: [ROLE_IDS.SUPER_ADMIN] },
@@ -159,12 +158,12 @@ export class SidebarComponent implements OnInit {
 
     return this.menuItems
       .filter(item => {
-        // If no allowedRoles specified, item is accessible to all
-        if (!item.allowedRoles || item.allowedRoles.length === 0) {
-          return true;
+        // Check if parent menu has allowedRoles restriction
+        if (item.allowedRoles && item.allowedRoles.length > 0) {
+          return item.allowedRoles.includes(this.currentRoleId!);
         }
-        // Check if current role is in allowedRoles
-        return item.allowedRoles.includes(this.currentRoleId!);
+        // If no allowedRoles, accessible to all
+        return true;
       })
       .map(item => {
         // Filter submenu items based on role
@@ -183,8 +182,8 @@ export class SidebarComponent implements OnInit {
         return item;
       })
       .filter(item => {
-        // Remove parent menu items that have no accessible submenu items
-        if (item.submenu && item.submenu.length === 0 && item.key !== 'dashboard') {
+        // For Settings menu, hide if user doesn't have access to any submenu items
+        if (item.key === 'settings' && item.submenu.length === 0) {
           return false;
         }
         return true;

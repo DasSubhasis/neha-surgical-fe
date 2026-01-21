@@ -1,5 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { ApiService, ApiResponse } from './api.service';
 
 export interface Specification {
@@ -39,7 +40,9 @@ export class SpecificationService {
    */
   getAllSpecifications(isActive: string = 'Y'): Observable<Specification[]> {
     const endpoint = `/Specifications${isActive ? '?isActive=Y' : ''}`;
-    return this.apiService.get<Specification[]>(endpoint);
+    return this.apiService.get<ApiResponse<Specification[]>>(endpoint).pipe(
+      map(response => response.data || [])
+    );
   }
 
   /**

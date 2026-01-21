@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, Injector } from '@angular/core';
 import {
   HttpEvent,
   HttpInterceptor,
@@ -15,8 +15,9 @@ import { STORAGE_KEYS, HTTP_STATUS } from '../config/api.config';
 export class AuthInterceptor implements HttpInterceptor {
   private isRefreshing = false;
   private refreshTokenSubject: BehaviorSubject<string | null> = new BehaviorSubject<string | null>(null);
+  private authService: AuthService | null = null;
 
-  constructor(private authService: AuthService) {}
+  constructor(private injector: Injector) {}
 
   intercept(request: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
     // Get auth token
@@ -50,6 +51,11 @@ export class AuthInterceptor implements HttpInterceptor {
       this.isRefreshing = true;
       this.refreshTokenSubject.next(null);
 
+      // Lazy-load AuthService to avoid circular dependency
+      if (!this.authService) {
+        this.authService = this.injector.get(AuthService);
+      }
+
       return this.authService.refreshToken().pipe(
         switchMap((response: AuthResponse) => {
           this.isRefreshing = false;
@@ -60,12 +66,12 @@ export class AuthInterceptor implements HttpInterceptor {
           }
           
           // Refresh failed, logout user
-          this.authService.logout();
+          this.authService!.logout();
           return throwError(() => new Error('Session expired'));
         }),
         catchError((error) => {
           this.isRefreshing = false;
-          this.authService.logout();
+          this.authService!.logout();
           return throwError(() => error);
         })
       );

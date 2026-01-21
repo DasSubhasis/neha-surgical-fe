@@ -20,6 +20,9 @@ import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-d
 import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-dropdown.component';
 import { ItemService, Item as ItemMaster } from '../../services/item.service';
 import { AuthService } from '../../services/auth.service';
+import { ItemGroupService, ItemGroup as ItemGroupMaster } from '../../services/item-group.service';
+import { SpecificationService, Specification } from '../../services/specification.service';
+import { SizeService, Size } from '../../services/size.service';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -89,7 +92,7 @@ const ITEMS_BY_GROUP: { [key: string]: Item[] } = {
 @Component({
   selector: 'app-consumption-billing',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridAngular, BreadcrumbComponent, ActionDropdownComponent, SearchableDropdownComponent],
+  imports: [CommonModule, FormsModule, BreadcrumbComponent, ActionDropdownComponent, SearchableDropdownComponent],
   templateUrl: './consumption-billing.component.html',
   styles: [`
     :host ::ng-deep .ag-header-small-font .ag-header-cell-label {
@@ -108,6 +111,17 @@ export class ConsumptionBillingComponent implements OnInit {
   availableItems: ItemMaster[] = [];
   selectedItemId: number | null = null;
   newItemQuantity: number = 1;
+
+  // Cascading dropdown data
+  itemGroupList: ItemGroupMaster[] = [];
+  specificationList: Specification[] = [];
+  sizeList: Size[] = [];
+  filteredItems: any[] = [];
+
+  // Selected filter values
+  selectedItemGroupId: number | null = null;
+  selectedSpecificationId: number | null = null;
+  selectedSizeId: number | null = null;
   
   // Modal States
   isConsumptionModalOpen = false;
@@ -119,6 +133,8 @@ export class ConsumptionBillingComponent implements OnInit {
   // Selected Data
   selectedOrder: Order | null = null;
   selectedItemGroups: string[] = [];
+  consumptionItems: any[] = []; // Freshly added items for consumption
+  uploadedImages: { file: File; preview: string }[] = []; // Images with preview URLs
   
   // Consumption Data
   consRows: ConsumptionItem[] = [];
@@ -172,7 +188,10 @@ export class ConsumptionBillingComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private router: Router,
     private itemService: ItemService,
-    private authService: AuthService
+    private authService: AuthService,
+    private itemGroupService: ItemGroupService,
+    private specificationService: SpecificationService,
+    private sizeService: SizeService
   ) {
     this.initializeColumnDefs();
   }
@@ -184,7 +203,6 @@ export class ConsumptionBillingComponent implements OnInit {
 
   private initializeColumnDefs(): void {
     this.columnDefs = [
-      { headerName: 'Order No', field: 'orderNo', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 140 },
       { headerName: 'Doctor', field: 'doctorName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
       { headerName: 'Hospital', field: 'hospitalName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
       { headerName: 'Op Date', field: 'operationDate', sortable: true, filter: 'agDateColumnFilter', width: 120, minWidth: 120 },
@@ -273,19 +291,21 @@ export class ConsumptionBillingComponent implements OnInit {
   handleOpenConsumption(order: Order): void {
     this.selectedOrder = order;
     this.selectedItemGroups = order.itemGroups || [];
-    this.consRows = order.items?.map(it => ({
-      id: it.id,
-      name: it.name,
-      unit: 'pcs',
-      group: null,
-      qtyConsumed: 0,
-      remarks: ''
-    })) || [];
+    this.consumptionItems = []; // Start with empty array for fresh items
+    this.consRows = [];
     this.billRows = [];
     this.attachments = order.attachments || [];
     this.remarks = '';
     this.noConsumption = false;
+    this.selectedItemGroupId = null;
+    this.selectedSpecificationId = null;
+    this.selectedSizeId = null;
+    this.selectedItemId = null;
+    this.newItemQuantity = 1;
+    this.filteredItems = [];
+    this.uploadedImages = [];
     this.isConsumptionModalOpen = true;
+    this.loadCascadingDropdownData();
   }
 
   closeConsumptionModal(): void {
@@ -293,12 +313,20 @@ export class ConsumptionBillingComponent implements OnInit {
     this.selectedOrder = null;
     this.consRows = [];
     this.selectedItemGroups = [];
+    this.consumptionItems = [];
+    this.selectedItemGroupId = null;
+    this.selectedSpecificationId = null;
+    this.selectedSizeId = null;
+    this.selectedItemId = null;
+    this.newItemQuantity = 1;
+    this.filteredItems = [];
+    // Clean up blob URLs
+    this.uploadedImages.forEach(img => URL.revokeObjectURL(img.preview));
+    this.uploadedImages = [];
   }
 
   removeOrderItem(index: number): void {
-    if (this.selectedOrder && this.selectedOrder.items) {
-      this.selectedOrder.items = this.selectedOrder.items.filter((_, i) => i !== index);
-    }
+    this.consumptionItems = this.consumptionItems.filter((_, i) => i !== index);
   }
 
   loadAvailableItems(): void {
@@ -326,32 +354,150 @@ export class ConsumptionBillingComponent implements OnInit {
     }
 
     // Check if item already exists
-    const itemExists = this.selectedOrder.items?.some(item => item.name === selectedItem.name);
+    const itemExists = this.consumptionItems.some(item => item.name === selectedItem.name);
     if (itemExists) {
       this.toastService.error('Item already exists in the list');
       return;
     }
 
-    // Add item to the list with manual flag
+    // Add item to the consumption items list
     const newItem = {
       id: String(selectedItem.id || selectedItem.itemId || 0),
       name: selectedItem.name,
       manual: true,
       isGroup: false,
-      quantity: this.newItemQuantity
+      quantity: this.newItemQuantity || 1
     };
 
-    if (!this.selectedOrder.items) {
-      this.selectedOrder.items = [];
-    }
-
-    this.selectedOrder.items.push(newItem);
+    this.consumptionItems.push(newItem);
+    this.toastService.success('Item added successfully');
     
     // Reset form
     this.selectedItemId = null;
     this.newItemQuantity = 1;
-    
-    this.toastService.success('Item added successfully');
+  }
+
+  validateQuantity(): void {
+    this.newItemQuantity = Math.floor(Math.abs(this.newItemQuantity || 1));
+    if (this.newItemQuantity < 1) {
+      this.newItemQuantity = 1;
+    }
+  }
+
+  onImageSelect(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const files = Array.from(input.files);
+      
+      // Validate file types (only images)
+      const validFiles = files.filter(file => file.type.startsWith('image/'));
+      
+      if (validFiles.length !== files.length) {
+        this.toastService.error('Only image files are allowed');
+      }
+      
+      // Add valid files with preview URLs to uploadedImages
+      validFiles.forEach(file => {
+        this.uploadedImages.push({
+          file: file,
+          preview: URL.createObjectURL(file)
+        });
+      });
+      
+      // Reset input
+      input.value = '';
+    }
+  }
+
+  removeImage(index: number): void {
+    // Revoke the blob URL to prevent memory leak
+    if (this.uploadedImages[index]) {
+      URL.revokeObjectURL(this.uploadedImages[index].preview);
+    }
+    this.uploadedImages.splice(index, 1);
+  }
+
+  onItemGroupChange(itemGroupId: any): void {
+    this.selectedItemGroupId = itemGroupId ? Number(itemGroupId) : null;
+    this.selectedItemId = null;
+    this.loadFilteredItems();
+  }
+
+  onSpecificationChange(specificationId: any): void {
+    this.selectedSpecificationId = specificationId ? Number(specificationId) : null;
+    this.selectedItemId = null;
+    this.loadFilteredItems();
+  }
+
+  onSizeChange(sizeId: any): void {
+    this.selectedSizeId = sizeId ? Number(sizeId) : null;
+    this.selectedItemId = null;
+    this.loadFilteredItems();
+  }
+
+  loadFilteredItems(): void {
+    // Load items with any combination of filters
+    if (!this.selectedItemGroupId && !this.selectedSpecificationId && !this.selectedSizeId) {
+      this.filteredItems = [];
+      return;
+    }
+
+    this.itemService.getFilteredItems(
+      this.selectedItemGroupId || undefined,
+      this.selectedSpecificationId || undefined,
+      this.selectedSizeId || undefined
+    ).subscribe({
+      next: (response) => {
+        if (response && response.data) {
+          this.filteredItems = response.data.map((item: any) => ({
+            id: item.itemId,
+            name: item.displayName
+          }));
+        } else {
+          this.filteredItems = [];
+        }
+      },
+      error: (error) => {
+        console.error('Error loading filtered items:', error);
+        this.toastService.error('Failed to load items');
+        this.filteredItems = [];
+      }
+    });
+  }
+
+  loadCascadingDropdownData(): void {
+    // Load Item Groups
+    this.itemGroupService.getAllItemGroups('Y').subscribe({
+      next: (groups) => {
+        this.itemGroupList = groups;
+      },
+      error: (error) => {
+        console.error('Error loading item groups:', error);
+        this.toastService.error('Failed to load item groups');
+      }
+    });
+
+    // Load Specifications
+    this.specificationService.getAllSpecifications('Y').subscribe({
+      next: (specs) => {
+        this.specificationList = specs;
+      },
+      error: (error) => {
+        console.error('Error loading specifications:', error);
+        this.toastService.error('Failed to load specifications');
+      }
+    });
+
+    // Load Sizes
+    this.sizeService.getAllSizes('Y').subscribe({
+      next: (sizes) => {
+        this.sizeList = sizes;
+      },
+      error: (error) => {
+        console.error('Error loading sizes:', error);
+        this.toastService.error('Failed to load sizes');
+      }
+    });
   }
 
   onItemGroupsChange(): void {
@@ -482,8 +628,8 @@ export class ConsumptionBillingComponent implements OnInit {
     }
     
     // Validate that there are items to consume
-    if (!this.selectedOrder.items || this.selectedOrder.items.length === 0) {
-      this.toastService.error('No items to consume');
+    if (this.consumptionItems.length === 0) {
+      this.toastService.error('Please add at least one consumption item');
       return;
     }
     
@@ -494,70 +640,89 @@ export class ConsumptionBillingComponent implements OnInit {
       return;
     }
     
-    // Prepare consumed items from the items list
-    const consumedItems = this.selectedOrder.items.map(item => ({
-      id: item.id,
+    // Prepare consumed items from consumptionItems
+    const consumedItems = this.consumptionItems.map(item => ({
+      id: String(item.id),
       name: item.name,
       quantity: item.quantity || 0,
       type: item.manual ? 'Manual' : 'Auto'
     }));
     
-    // Prepare the consumption request
-    const consumptionRequest = {
-      orderId: this.selectedOrder.orderId,
-      itemGroupId: 0, // Set to 0 or get from order if needed
-      itemGroupName: this.selectedOrder.itemGroups && this.selectedOrder.itemGroups.length > 0 
-        ? this.selectedOrder.itemGroups.join(', ') 
-        : '',
-      consumedItems: consumedItems,
-      createdBy: currentUser.email
-    };
+    // Convert images to base64
+    this.isSaving = true;
+    const imagePromises = this.uploadedImages.map(img => {
+      return new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(img.file);
+      });
+    });
     
-    // Call the API
-    this.consumptionBillingService.saveConsumption(consumptionRequest).subscribe({
-      next: (response) => {
-        this.toastService.success('Consumption saved successfully');
-        this.isConsumptionModalOpen = false;
-        
-        // Update selected order with consumption records
-        if (this.selectedOrder) {
-          this.selectedOrder = {
-            ...this.selectedOrder,
-            consumptionRecords: consumedItems.map(item => ({
-              id: item.id,
-              name: item.name,
-              unit: 'pcs',
-              qty: item.quantity,
-              remarks: ''
-            }))
-          };
+    Promise.all(imagePromises).then(base64Images => {
+      // Prepare the consumption request
+      const consumptionRequest = {
+        orderId: this.selectedOrder!.orderId,
+        itemGroupId: this.selectedItemGroupId || 0,
+        itemGroupName: this.selectedOrder!.itemGroups && this.selectedOrder!.itemGroups.length > 0 
+          ? this.selectedOrder!.itemGroups.join(', ') 
+          : '',
+        consumedItems: consumedItems,
+        images: base64Images,
+        createdBy: currentUser.email
+      };
+      
+      // Call the API
+      this.consumptionBillingService.saveConsumption(consumptionRequest).subscribe({
+        next: (response) => {
+          this.isSaving = false;
+          this.toastService.success('Consumption saved successfully');
+          
+          // Update selected order with consumption records
+          if (this.selectedOrder) {
+            this.selectedOrder = {
+              ...this.selectedOrder,
+              consumptionRecords: consumedItems.map(item => ({
+                id: item.id,
+                name: item.name,
+                unit: 'pcs',
+                qty: item.quantity,
+                remarks: ''
+              }))
+            };
+          }
+          
+          // Initialize billing rows from consumed items
+          const consumedBillingRows = (this.selectedOrder?.consumptionRecords || []).map(c => ({
+            id: `b-${c.id}`,
+            srcConsumptionId: c.id,
+            name: c.name,
+            unit: c.unit,
+            qty: c.qty,
+            rate: 0,
+            amount: 0,
+            fromConsumption: true
+          }));
+          
+          this.billRows = consumedBillingRows;
+          this.mappedConsumptionIds = new Set(consumedBillingRows.map(b => b.srcConsumptionId!));
+          
+          // Close consumption modal
+          this.isConsumptionModalOpen = false;
+          
+          // Refresh the AG Grid to get updated orders
+          this.loadData();
+        },
+        error: (error) => {
+          this.isSaving = false;
+          console.error('Error saving consumption:', error);
+          this.toastService.error(error.message || 'Failed to save consumption');
         }
-        
-        // Initialize billing rows from consumed items
-        const consumedBillingRows = (this.selectedOrder?.consumptionRecords || []).map(c => ({
-          id: `b-${c.id}`,
-          srcConsumptionId: c.id,
-          name: c.name,
-          unit: c.unit,
-          qty: c.qty,
-          rate: 0,
-          amount: 0,
-          fromConsumption: true
-        }));
-        
-        this.billRows = consumedBillingRows;
-        this.mappedConsumptionIds = new Set(consumedBillingRows.map(b => b.srcConsumptionId!));
-        
-        // Close consumption modal
-        this.isConsumptionModalOpen = false;
-        
-        // Refresh the AG Grid to get updated orders
-        this.loadData();
-      },
-      error: (error) => {
-        console.error('Error saving consumption:', error);
-        this.toastService.error(error.message || 'Failed to save consumption');
-      }
+      });
+    }).catch(error => {
+      this.isSaving = false;
+      console.error('Error converting images:', error);
+      this.toastService.error('Failed to process images');
     });
   }
 
@@ -753,6 +918,42 @@ export class ConsumptionBillingComponent implements OnInit {
     const month = String(d.getMonth() + 1).padStart(2, '0');
     const year = d.getFullYear();
     return `${day}-${month}-${year}`;
+  }
+
+  formatDateTime(dateTimeStr: string): string {
+    if (!dateTimeStr) return '';
+    const d = new Date(dateTimeStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    const hours = d.getHours();
+    const minutes = d.getMinutes();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    const hour12 = hours % 12 || 12;
+    const min = String(minutes).padStart(2, '0');
+    return `${day}-${month}-${year} ${String(hour12).padStart(2, '0')}:${min} ${ampm}`;
+  }
+
+  formatOperationDateTime(dateStr: string, timeStr: string): string {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const day = String(d.getDate()).padStart(2, '0');
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const month = months[d.getMonth()];
+    const year = d.getFullYear();
+    
+    let timeFormatted = '';
+    if (timeStr) {
+      const [hours, minutes] = timeStr.split(':');
+      const hour = parseInt(hours, 10);
+      const min = minutes || '00';
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      const hour12 = hour % 12 || 12;
+      timeFormatted = ` ${String(hour12).padStart(2, '0')}:${min} ${ampm}`;
+    }
+    
+    return `${day}-${month}-${year}${timeFormatted}`;
   }
 
   getCurrentDate(): string {

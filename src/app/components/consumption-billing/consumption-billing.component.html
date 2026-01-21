@@ -12,154 +12,396 @@
     </div>
   </div>
 
-  <!-- AG Grid Container -->
-  <div class="flex-1 min-h-0 relative">
-    <!-- Loading Overlay -->
-    <div *ngIf="isLoading" class="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
-      <div class="flex flex-col items-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        <p class="mt-3 text-sm text-gray-600">Loading orders...</p>
+  <!-- Orders List Container -->
+  <div class="flex-1 relative overflow-hidden">
+    <!-- Loading State -->
+    <div *ngIf="isLoading" class="flex items-center justify-center h-full">
+      <div class="text-center">
+        <svg class="animate-spin h-12 w-12 text-indigo-600 mx-auto" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="mt-4 text-gray-500">Loading orders...</p>
       </div>
     </div>
 
-    <!-- AG Grid -->
-    <ag-grid-angular
-      class="ag-theme-alpine h-full w-full"
-      [columnDefs]="columnDefs"
-      [rowData]="billableOrders"
-      [defaultColDef]="defaultColDef"
-      [pagination]="true"
-      [paginationPageSize]="20"
-      [rowHeight]="48"
-      [headerHeight]="40"
-      [animateRows]="true"
-      [suppressCellFocus]="true"
-      (gridReady)="onGridReady($event)"
-    ></ag-grid-angular>
+    <!-- Scrollable Orders List -->
+    <div *ngIf="!isLoading" class="h-full overflow-y-auto">
+      <!-- Empty State -->
+      <div *ngIf="billableOrders.length === 0" class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <p class="mt-4 text-gray-500">No billable orders found</p>
+      </div>
+
+      <!-- Orders Cards -->
+      <div *ngIf="billableOrders.length > 0" class="space-y-3 pb-4">
+        <div
+          *ngFor="let order of billableOrders"
+          class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow duration-200"
+        >
+          <!-- Header -->
+          <div class="flex justify-between items-start mb-3">
+            <div class="flex-1">
+              <h3 class="text-lg font-bold text-indigo-700">{{ formatOperationDateTime(order.operationDate, order.operationTime) }}</h3>
+              
+            </div>
+            <span
+              [ngClass]="{
+                'bg-yellow-100 text-yellow-800': order.status === 'Completed (Not Billed)',
+                'bg-green-100 text-green-800': order.status === 'Completed',
+                'bg-gray-100 text-gray-800': order.status !== 'Completed (Not Billed)' && order.status !== 'Completed'
+              }"
+              class="px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ml-2"
+            >
+              {{ order.status }}
+            </span>
+          </div>
+
+          <!-- Details Grid -->
+          <div class="grid grid-cols-2 gap-3 mb-3 text-sm">
+            <div>
+              <span class="text-gray-500">Doctor:</span>
+              <p class="font-medium text-gray-900">{{ order.doctorName }}</p>
+            </div>
+            <div>
+              <span class="text-gray-500">Hospital:</span>
+              <p class="font-medium text-gray-900">{{ order.hospitalName }}</p>
+            </div>
+          </div>
+
+          <!-- Action Buttons -->
+          <div class="flex gap-2 pt-3 border-t border-gray-100">
+            <button
+              (click)="handleOpenConsumption(order)"
+              class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors duration-200 text-sm"
+              title="Consumption Entry"
+            >
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+              </svg>
+              Consumption
+            </button>
+            
+            <button
+              (click)="handleViewOrder(order)"
+              class="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors duration-200 text-sm"
+              title="View Order"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              View
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ============ Consumption Entry Modal ============ -->
-  <div *ngIf="isConsumptionModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-50 flex items-start justify-center p-4">
-    <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full mt-8 mb-8">
-      <!-- Modal Header -->
-      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50">
-        <h2 class="text-xl font-semibold text-gray-900">Consumption Entry</h2>
-        <button (click)="closeConsumptionModal()" class="text-gray-400 hover:text-gray-600 transition">
-          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
+  <div *ngIf="isConsumptionModalOpen" class="fixed inset-0 z-50 overflow-y-auto bg-gradient-to-br from-gray-900 to-gray-800 bg-opacity-95 flex items-start md:items-center justify-center p-3 md:p-6">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-5xl w-full my-4 md:my-8 overflow-hidden">
+      <!-- Modal Header with Gradient -->
+      <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-4 md:px-6 py-4 md:py-5">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="bg-white bg-opacity-20 p-2 rounded-lg">
+              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-xl md:text-2xl font-bold text-white">Consumption Entry</h2>
+              <p class="text-indigo-100 text-xs md:text-sm mt-0.5">Record consumed items for billing</p>
+            </div>
+          </div>
+          <button 
+            (click)="closeConsumptionModal()" 
+            class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition-all duration-200"
+          >
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
       </div>
 
       <!-- Modal Body -->
-      <div class="px-6 py-4 max-h-[calc(100vh-250px)] overflow-y-auto">
-        <!-- Basic Info -->
-        <div class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div><span class="font-semibold text-gray-700">Order No:</span> <span class="text-gray-900">{{ selectedOrder?.orderNo }}</span></div>
-            <div><span class="font-semibold text-gray-700">Status:</span> <span class="text-gray-900">{{ selectedOrder?.status }}</span></div>
-            <div><span class="font-semibold text-gray-700">Doctor:</span> <span class="text-gray-900">{{ selectedOrder?.doctorName }}</span></div>
-            <div><span class="font-semibold text-gray-700">Hospital:</span> <span class="text-gray-900">{{ selectedOrder?.hospitalName }}</span></div>
-            <div><span class="font-semibold text-gray-700">Material Send Date:</span> <span class="text-gray-900">{{ selectedOrder?.materialSendDate }}</span></div>
-            <div><span class="font-semibold text-gray-700">Created By:</span> <span class="text-gray-900">{{ selectedOrder?.createdBy }}</span></div>
-            <div><span class="font-semibold text-gray-700">Operation Date:</span> <span class="text-gray-900">{{ selectedOrder?.operationDate }}</span></div>
-            <div><span class="font-semibold text-gray-700">Operation Time:</span> <span class="text-gray-900">{{ selectedOrder?.operationTime }}</span></div>
+      <div class="px-4 md:px-6 py-4 md:py-5 max-h-[calc(100vh-200px)] md:max-h-[calc(100vh-220px)] overflow-y-auto">
+        <!-- Order Information - Compact -->
+        <div class="mb-4 bg-white rounded-lg p-3 border border-gray-200">
+          <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2.5">Order Information</h3>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+            <div class="flex justify-between md:block">
+              <span class="text-gray-500">Operation Schedule:</span>
+              <span class="font-medium text-gray-900 md:block">{{ formatOperationDateTime(selectedOrder?.operationDate || '', selectedOrder?.operationTime || '') }}</span>
+            </div>
+            
+            <div class="flex justify-between md:block">
+              <span class="text-gray-500">Material Sent:</span>
+              <span class="font-medium text-gray-900 md:block">{{ formatDateTime(selectedOrder?.materialSendDate || '') }}</span>
+            </div>
+            
+            <div class="flex justify-between md:block">
+              <span class="text-gray-500">Doctor:</span>
+              <span class="font-medium text-gray-900 md:block">{{ selectedOrder?.doctorName }}</span>
+            </div>
+            
+            <div class="flex justify-between md:block">
+              <span class="text-gray-500">Hospital:</span>
+              <span class="font-medium text-gray-900 md:block">{{ selectedOrder?.hospitalName }}</span>
+            </div>
           </div>
         </div>
 
-        <!-- Item Groups -->
-        <div *ngIf="selectedOrder && selectedOrder.itemGroups && selectedOrder.itemGroups.length > 0" class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Item Groups</h3>
-          <div class="flex flex-wrap gap-2">
-            <span *ngFor="let group of selectedOrder.itemGroups" class="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-indigo-100 text-indigo-800">
-              {{ group }}
+        <!-- Add Consumption Item Card - More Compact -->
+        <div class="mb-4 bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 md:p-4 border border-green-200 shadow-sm">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="bg-green-100 p-1.5 rounded-lg">
+              <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+              </svg>
+            </div>
+            <h3 class="text-sm md:text-base font-bold text-gray-900">Add Consumption Item</h3>
+          </div>
+          
+          <div class="space-y-3">
+            <!-- First Row: Item Group and Specification -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Item Group</label>
+                <app-searchable-dropdown
+                  [(ngModel)]="selectedItemGroupId"
+                  (ngModelChange)="onItemGroupChange($event)"
+                  [options]="itemGroupList"
+                  [idKey]="'itemGroupId'"
+                  [nameKey]="'name'"
+                  [placeholder]="'Select item group...'"
+                ></app-searchable-dropdown>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Specification</label>
+                <app-searchable-dropdown
+                  [(ngModel)]="selectedSpecificationId"
+                  (ngModelChange)="onSpecificationChange($event)"
+                  [options]="specificationList"
+                  [idKey]="'specificationId'"
+                  [nameKey]="'name'"
+                  [placeholder]="'Select specification...'"
+                ></app-searchable-dropdown>
+              </div>
+            </div>
+            
+            <!-- Second Row: Size and Item -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Size</label>
+                <app-searchable-dropdown
+                  [(ngModel)]="selectedSizeId"
+                  (ngModelChange)="onSizeChange($event)"
+                  [options]="sizeList"
+                  [idKey]="'sizeId'"
+                  [nameKey]="'name'"
+                  [placeholder]="'Select size...'"
+                ></app-searchable-dropdown>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Item *</label>
+                <app-searchable-dropdown
+                  [(ngModel)]="selectedItemId"
+                  [options]="filteredItems"
+                  [idKey]="'id'"
+                  [nameKey]="'name'"
+                  [placeholder]="filteredItems.length > 0 ? 'Select item...' : 'Use filters to find items...'"
+                ></app-searchable-dropdown>
+              </div>
+            </div>
+            
+            <!-- Third Row: Quantity and Add Button -->
+            <div class="flex gap-3">
+              <div class="w-24">
+                <label class="block text-xs font-semibold text-gray-700 mb-1.5">Qty *</label>
+                <input
+                  type="number"
+                  [(ngModel)]="newItemQuantity"
+                  min="1"
+                  step="1"
+                  (input)="validateQuantity()"
+                  class="w-full px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-semibold text-center focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  placeholder="1"
+                />
+              </div>
+              <div class="flex-1 flex md:items-end">
+                <button
+                  (click)="addNewItem()"
+                  class="w-full px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-semibold shadow-md hover:shadow-lg disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2 text-sm"
+                  [disabled]="!selectedItemId"
+                >
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                  </svg>
+                  <span>Add Item</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Added Consumption Items List - More Compact -->
+        <div *ngIf="consumptionItems && consumptionItems.length > 0" class="mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <div class="bg-blue-100 p-1.5 rounded-lg">
+                <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <h3 class="text-sm md:text-base font-bold text-gray-900">Added Items</h3>
+            </div>
+            <span class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">
+              {{ consumptionItems.length }}
             </span>
           </div>
+
+          <!-- Item List -->
+          <div class="space-y-2">
+            <div 
+              *ngFor="let item of consumptionItems; let i = index" 
+              class="bg-white rounded-lg p-3 border border-gray-200 hover:border-indigo-300 transition-all duration-200 flex items-center justify-between gap-3"
+            >
+              <!-- Item Name - Left -->
+              <div class="flex-1 min-w-0">
+                <p class="font-medium text-gray-900 text-sm truncate">{{ item.name }}</p>
+              </div>
+
+              <!-- Quantity - Right -->
+              <div class="flex items-center gap-3">
+                <span class="text-sm font-semibold text-gray-700 whitespace-nowrap">Qty: {{ item.quantity || 1 }}</span>
+                
+                <!-- Delete Button -->
+                <button
+                  (click)="removeOrderItem(i)"
+                  class="flex-shrink-0 p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                  title="Remove"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <!-- Add New Item -->
-        <div class="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-300">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Add New Item</h3>
-          <div class="flex gap-3">
-            <div class="flex-1">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Select Item</label>
-              <app-searchable-dropdown
-                [(ngModel)]="selectedItemId"
-                [options]="availableItems"
-                [idKey]="'itemId'"
-                [nameKey]="'name'"
-                [placeholder]="'Type to search item...'"
-              ></app-searchable-dropdown>
+        <!-- Empty State for Items - More Compact -->
+        <div *ngIf="!consumptionItems || consumptionItems.length === 0" class="mb-4 bg-gray-50 rounded-lg p-4 md:p-6 border-2 border-dashed border-gray-300 text-center">
+          <svg class="w-10 h-10 md:w-12 md:h-12 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+          </svg>
+          <h4 class="text-sm md:text-base font-semibold text-gray-700 mb-1">No Items Added</h4>
+          <p class="text-xs text-gray-500">Add consumption items using the form above</p>
+        </div>
+
+        <!-- Remarks - More Compact -->
+        <div *ngIf="selectedOrder && selectedOrder.remarks" class="bg-amber-50 rounded-lg p-3 border border-amber-200">
+          <div class="flex items-start gap-2 mb-1">
+            <svg class="w-4 h-4 text-amber-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+            <h3 class="text-xs font-bold text-gray-900">Remarks</h3>
+          </div>
+          <p class="text-sm text-gray-700 leading-relaxed pl-6">{{ selectedOrder.remarks }}</p>
+        </div>
+
+        <!-- Image Upload Section -->
+        <div class="mb-4 bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-3 md:p-4 border border-purple-200 shadow-sm">
+          <div class="flex items-center gap-2 mb-3">
+            <div class="bg-purple-100 p-1.5 rounded-lg">
+              <svg class="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
             </div>
-            <div class="flex items-end">
+            <h3 class="text-sm md:text-base font-bold text-gray-900">Upload Images</h3>
+            <span *ngIf="uploadedImages.length > 0" class="bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {{ uploadedImages.length }}
+            </span>
+          </div>
+
+          <!-- Upload Button -->
+          <div class="mb-3">
+            <label class="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border-2 border-dashed border-purple-300 rounded-lg hover:border-purple-500 hover:bg-purple-50 transition-all duration-200 cursor-pointer">
+              <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
+              </svg>
+              <span class="text-sm font-semibold text-purple-700">Choose Images</span>
+              <input 
+                type="file" 
+                accept="image/*" 
+                multiple 
+                (change)="onImageSelect($event)"
+                class="hidden"
+              />
+            </label>
+            <p class="text-xs text-gray-500 mt-1.5 text-center">You can select multiple images</p>
+          </div>
+
+          <!-- Image Previews -->
+          <div *ngIf="uploadedImages.length > 0" class="space-y-2">
+            <div 
+              *ngFor="let image of uploadedImages; let i = index"
+              class="flex items-center gap-3 p-2 bg-white rounded-lg border border-purple-200 hover:border-purple-400 transition-all duration-200"
+            >
+              <!-- Image Preview - Left -->
+              <img 
+                [src]="image.preview" 
+                [alt]="image.file.name"
+                class="w-16 h-16 object-cover rounded border border-gray-200 flex-shrink-0"
+              />
+              
+              <!-- Image Name - Middle -->
+              <div class="flex-1 min-w-0">
+                <p class="text-sm font-medium text-gray-900 truncate" [title]="image.file.name">{{ image.file.name }}</p>
+                <p class="text-xs text-gray-500">{{ (image.file.size / 1024).toFixed(1) }} KB</p>
+              </div>
+
+              <!-- Delete Button - Right -->
               <button
-                (click)="addNewItem()"
-                class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-sm font-medium whitespace-nowrap"
+                (click)="removeImage(i)"
+                class="flex-shrink-0 p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                title="Remove image"
               >
-                Add Item
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
               </button>
             </div>
           </div>
         </div>
-
-        <!-- Items -->
-        <div *ngIf="selectedOrder && selectedOrder.items && selectedOrder.items.length > 0" class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Items</h3>
-          <div class="border border-gray-300 rounded-lg overflow-hidden">
-            <table class="w-full">
-              <thead class="bg-gray-100">
-                <tr>
-                  <th class="text-left px-4 py-2 text-sm font-semibold text-gray-700">Item Name</th>
-                  <th class="text-center px-4 py-2 text-sm font-semibold text-gray-700">Type</th>
-                  <th class="text-center px-4 py-2 text-sm font-semibold text-gray-700">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of selectedOrder.items; let i = index" class="border-t border-gray-200">
-                  <td class="px-4 py-2 text-sm text-gray-900">{{ item.name }}</td>
-                  <td class="text-center px-4 py-2">
-                    <span *ngIf="item.manual" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Manual</span>
-                    <span *ngIf="!item.manual" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Auto</span>
-                  </td>
-                  <td class="text-center px-4 py-2">
-                    <button
-                      (click)="removeOrderItem(i)"
-                      class="inline-flex items-center justify-center w-8 h-8 text-red-600 hover:bg-red-50 rounded transition-colors"
-                      title="Delete item"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- Remarks -->
-        <div *ngIf="selectedOrder && selectedOrder.remarks" class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Remarks</h3>
-          <p class="text-sm text-gray-600">{{ selectedOrder.remarks }}</p>
-        </div>
       </div>
 
-      <!-- Modal Footer -->
-      <div class="flex items-center justify-end space-x-3 px-6 py-4 border-t border-gray-200 bg-gray-50">
-        <button
-          (click)="closeConsumptionModal()"
-          class="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-medium"
-        >
-          Cancel
-        </button>
-        <button
-          (click)="handleSaveConsumption()"
-          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition font-medium"
-        >
-          Save Consumption
-        </button>
+      <!-- Modal Footer with Actions - More Compact -->
+      <div class="bg-gradient-to-r from-gray-50 to-gray-100 px-4 md:px-6 py-3 md:py-4 border-t border-gray-200">
+        <div class="flex flex-col-reverse md:flex-row gap-2 md:justify-end">
+          <button
+            (click)="closeConsumptionModal()"
+            class="w-full md:w-auto px-5 py-2 bg-white text-gray-700 border-2 border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 font-semibold shadow-sm text-sm"
+          >
+            Cancel
+          </button>
+          <button
+            (click)="handleSaveConsumption()"
+            class="w-full md:w-auto px-6 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-bold shadow-md hover:shadow-lg flex items-center justify-center gap-2 text-sm"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span>Save</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -461,50 +703,130 @@
       </div>
 
       <!-- Modal Body -->
-      <div class="px-6 py-4 max-h-[calc(100vh-250px)] overflow-y-auto">
-        <!-- Basic Info -->
-        <div class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
+      <div class="px-6 py-4 max-h-[calc(100vh-250px)] overflow-y-auto space-y-4">
+        <!-- Order Header Info -->
+        <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
+          <div class="grid grid-cols-3 gap-4">
+            <div>
+              <div class="text-xs font-medium text-gray-500 mb-1">Doctor</div>
+              <div class="text-sm font-semibold text-gray-900">{{ selectedOrder?.doctorName }}</div>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-gray-500 mb-1">Hospital</div>
+              <div class="text-sm font-semibold text-gray-900">{{ selectedOrder?.hospitalName }}</div>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-gray-500 mb-1">Status</div>
+              <span
+                [ngClass]="{
+                  'bg-yellow-100 text-yellow-800': selectedOrder?.status === 'Completed (Not Billed)',
+                  'bg-green-100 text-green-800': selectedOrder?.status === 'Completed',
+                  'bg-gray-100 text-gray-800': selectedOrder?.status !== 'Completed (Not Billed)' && selectedOrder?.status !== 'Completed'
+                }"
+                class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+              >
+                {{ selectedOrder?.status }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Basic Information -->
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Basic Information
+          </h4>
+          <div class="grid grid-cols-1 gap-4 text-sm">
+            <div>
+              <div class="text-xs font-medium text-gray-500 mb-1">Operation Date & Time</div>
+              <div class="text-sm font-semibold text-indigo-700">{{ formatOperationDateTime(selectedOrder?.operationDate || '', selectedOrder?.operationTime || '') }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Material Delivery -->
+        <div *ngIf="selectedOrder && selectedOrder.materialDelivery" class="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+            </svg>
+            Material Delivery
+          </h4>
           <div class="grid grid-cols-2 gap-4 text-sm">
-            <div><span class="font-semibold text-gray-700">Order No:</span> <span class="text-gray-900">{{ selectedOrder?.orderNo }}</span></div>
-            <div><span class="font-semibold text-gray-700">Status:</span> <span class="text-gray-900">{{ selectedOrder?.status }}</span></div>
-            <div><span class="font-semibold text-gray-700">Doctor:</span> <span class="text-gray-900">{{ selectedOrder?.doctorName }}</span></div>
-            <div><span class="font-semibold text-gray-700">Hospital:</span> <span class="text-gray-900">{{ selectedOrder?.hospitalName }}</span></div>
-            <div><span class="font-semibold text-gray-700">Material Send Date:</span> <span class="text-gray-900">{{ selectedOrder?.materialSendDate }}</span></div>
-            <div><span class="font-semibold text-gray-700">Created By:</span> <span class="text-gray-900">{{ selectedOrder?.createdBy }}</span></div>
-            <div><span class="font-semibold text-gray-700">Operation Date:</span> <span class="text-gray-900">{{ selectedOrder?.operationDate }}</span></div>
-            <div><span class="font-semibold text-gray-700">Operation Time:</span> <span class="text-gray-900">{{ selectedOrder?.operationTime }}</span></div>
+            <div>
+              <div class="text-xs font-medium text-gray-500 mb-1">Delivery Status</div>
+              <span
+                [ngClass]="{
+                  'bg-green-100 text-green-800': selectedOrder.materialDelivery.deliveryStatus === 'Delivered',
+                  'bg-yellow-100 text-yellow-800': selectedOrder.materialDelivery.deliveryStatus === 'Pending',
+                  'bg-gray-100 text-gray-800': selectedOrder.materialDelivery.deliveryStatus !== 'Delivered' && selectedOrder.materialDelivery.deliveryStatus !== 'Pending'
+                }"
+                class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
+              >
+                {{ selectedOrder.materialDelivery.deliveryStatus }}
+              </span>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-gray-500 mb-1">Delivered By</div>
+              <div class="text-sm text-gray-800">{{ selectedOrder.materialDelivery.actualDeliveryBy }}</div>
+            </div>
+            <div>
+              <div class="text-xs font-medium text-gray-500 mb-1">Delivery Time</div>
+              <div class="text-sm text-gray-800">{{ formatDateTime(selectedOrder.materialDelivery.actualDeliveryTime) }}</div>
+            </div>
+            <div *ngIf="selectedOrder.materialDelivery.remarks">
+              <div class="text-xs font-medium text-gray-500 mb-1">Remarks</div>
+              <div class="text-sm text-gray-800">{{ selectedOrder.materialDelivery.remarks }}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Item Groups -->
+        <div *ngIf="selectedOrder && selectedOrder.itemGroups && selectedOrder.itemGroups.length > 0" class="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+            </svg>
+            Item Groups
+          </h4>
+          <div class="flex flex-wrap gap-2">
+            <span *ngFor="let group of selectedOrder.itemGroups" class="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-indigo-100 text-indigo-800">
+              {{ group }}
+            </span>
           </div>
         </div>
 
         <!-- Items -->
-        <div *ngIf="selectedOrder && selectedOrder.items && selectedOrder.items.length > 0" class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Items</h3>
-          <div class="border border-gray-300 rounded-lg overflow-hidden">
-            <table class="w-full">
-              <thead class="bg-gray-100">
-                <tr>
-                  <th class="text-left px-4 py-2 text-sm font-semibold text-gray-700">Item Name</th>
-                  <th class="text-center px-4 py-2 text-sm font-semibold text-gray-700">Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let item of selectedOrder.items" class="border-t border-gray-200">
-                  <td class="px-4 py-2 text-sm text-gray-900">{{ item.name }}</td>
-                  <td class="text-center px-4 py-2">
-                    <span *ngIf="item.manual" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Manual</span>
-                    <span *ngIf="!item.manual" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Auto</span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        <div *ngIf="selectedOrder && selectedOrder.items && selectedOrder.items.length > 0" class="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+            </svg>
+            Items
+          </h4>
+          <div class="border border-gray-300 rounded-lg bg-white shadow-sm max-h-96 overflow-y-auto">
+            <div class="divide-y divide-gray-200">
+              <div *ngFor="let item of selectedOrder.items" class="px-4 py-3 hover:bg-gray-50 transition-colors duration-150 flex items-center justify-between">
+                <span class="text-sm text-gray-700">{{ item.name }}</span>
+                <span *ngIf="item.manual" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Manual</span>
+                <span *ngIf="!item.manual" class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">Auto</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- Remarks -->
-        <div *ngIf="selectedOrder && selectedOrder.remarks" class="mb-6">
-          <h3 class="text-lg font-semibold text-gray-900 mb-3">Remarks</h3>
-          <p class="text-sm text-gray-600">{{ selectedOrder.remarks }}</p>
+        <div *ngIf="selectedOrder && selectedOrder.remarks" class="bg-white border border-gray-200 rounded-lg p-4">
+          <h4 class="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+            </svg>
+            Remarks
+          </h4>
+          <p class="text-sm text-gray-600 bg-gray-50 p-3 rounded border border-gray-200">{{ selectedOrder.remarks }}</p>
         </div>
       </div>
 

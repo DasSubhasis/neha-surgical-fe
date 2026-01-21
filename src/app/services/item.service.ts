@@ -92,6 +92,21 @@ export class ItemService {
   }
 
   /**
+   * Get filtered items based on itemGroupId, specificationId, and sizeId
+   */
+  getFilteredItems(itemGroupId?: number, specificationId?: number, sizeId?: number): Observable<any> {
+    let queryParams: string[] = [];
+    if (itemGroupId) queryParams.push(`itemGroupId=${itemGroupId}`);
+    if (specificationId) queryParams.push(`specificationId=${specificationId}`);
+    if (sizeId) queryParams.push(`sizeId=${sizeId}`);
+    
+    const queryString = queryParams.length > 0 ? `?${queryParams.join('&')}` : '';
+    const endpoint = `/Items/filter${queryString}`;
+    
+    return this.apiService.get<any>(endpoint);
+  }
+
+  /**
    * Get a single item by ID
    */
   getItemById(id: number): Observable<Item> {
