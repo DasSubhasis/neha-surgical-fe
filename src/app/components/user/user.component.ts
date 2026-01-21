@@ -8,6 +8,7 @@ import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcru
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
 import { UserService, User, UserFormData, ImportRow } from '../../services/user.service';
 import { RoleService, Role } from '../../services/role.service';
+import { ToastService } from '../../services/toast.service';
 
 @Component({
   selector: 'app-user',
@@ -124,19 +125,19 @@ export class UserComponent implements OnInit {
         const container = document.createElement('div');
         container.className = 'flex items-center justify-center w-full h-full space-x-1';
         
-        // Edit button
-        const editBtn = document.createElement('button');
-        editBtn.className = 'flex items-center justify-center text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors duration-200';
-        editBtn.title = 'Edit';
-        editBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>`;
-        editBtn.onclick = () => this.openEditUser(params.data);
-
         // View button
         const viewBtn = document.createElement('button');
         viewBtn.className = 'flex items-center justify-center text-green-600 hover:text-green-900 p-1 hover:bg-green-50 rounded transition-colors duration-200';
         viewBtn.title = 'View';
         viewBtn.innerHTML = `<svg class="w-4 h-4" fill="currentColor" viewBox="0 0 640 640"><path d="M320 96C239.2 96 174.5 132.8 127.4 176.6C80.6 220.1 49.3 272 34.4 307.7C31.1 315.6 31.1 324.4 34.4 332.3C49.3 368 80.6 420 127.4 463.4C174.5 507.1 239.2 544 320 544C400.8 544 465.5 507.2 512.6 463.4C559.4 419.9 590.7 368 605.6 332.3C608.9 324.4 608.9 315.6 605.6 307.7C590.7 272 559.4 220 512.6 176.6C465.5 132.9 400.8 96 320 96zM176 320C176 240.5 240.5 176 320 176C399.5 176 464 240.5 464 320C464 399.5 399.5 464 320 464C240.5 464 176 399.5 176 320zM320 256C320 291.3 291.3 320 256 320C244.5 320 233.7 317 224.3 311.6C223.3 322.5 224.2 333.7 227.2 344.8C240.9 396 293.6 426.4 344.8 412.7C396 399 426.4 346.3 412.7 295.1C400.5 249.4 357.2 220.3 311.6 224.3C316.9 233.6 320 244.4 320 256z"/></svg>`;
         viewBtn.onclick = () => this.viewUser = params.data;
+
+        // Edit button
+        const editBtn = document.createElement('button');
+        editBtn.className = 'flex items-center justify-center text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors duration-200';
+        editBtn.title = 'Edit';
+        editBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>`;
+        editBtn.onclick = () => this.openEditUser(params.data);
 
         // Delete button
         const deleteBtn = document.createElement('button');
@@ -145,8 +146,8 @@ export class UserComponent implements OnInit {
         deleteBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
         deleteBtn.onclick = () => this.confirmDelete(params.data);
 
-        container.appendChild(editBtn);
         container.appendChild(viewBtn);
+        container.appendChild(editBtn);
         container.appendChild(deleteBtn);
 
         return container;
@@ -179,7 +180,8 @@ export class UserComponent implements OnInit {
   constructor(
     private userService: UserService,
     private roleService: RoleService,
-    private router: Router
+    private router: Router,
+    private toastService: ToastService
   ) {}
 
   ngOnInit(): void {
@@ -418,26 +420,26 @@ export class UserComponent implements OnInit {
 
   handleSaveUser(): void {
     if (!this.formData.email?.trim()) {
-      console.error('Email is mandatory');
+      this.toastService.error('Email is mandatory');
       return;
     }
     if (!this.formData.fullName?.trim()) {
-      console.error('Full name is mandatory');
+      this.toastService.error('Full name is mandatory');
       return;
     }
     if (!this.formData.roleId) {
-      console.error('Role is mandatory');
+      this.toastService.error('Role is mandatory');
       return;
     }
 
+    // Check for duplicate email
     const dupEmail = this.checkDuplicateEmail(
       this.formData.email, 
       this.editingUser?.id || null
     );
 
     if (dupEmail) {
-      console.error('Email already exists:', dupEmail);
-      this.viewUser = dupEmail;
+      this.toastService.error(`Email already exists: ${dupEmail.email} (${dupEmail.fullName})`);
       return;
     }
 
