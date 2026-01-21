@@ -64,6 +64,14 @@ export interface MaterialDeliveryFormData {
   createdBy: string;
 }
 
+export interface MaterialDeliveryInfo {
+  deliveryStatus: string;
+  actualDeliveryBy: string;
+  actualDeliveryByUserId: number;
+  actualDeliveryTime: string;
+  remarks: string;
+}
+
 export interface MaterialDelivery {
   deliveryId: number;
   orderId: number;
@@ -81,6 +89,7 @@ export interface MaterialDelivery {
   updatedBy: string | null;
   createdAt: string;
   updatedAt: string;
+  materialDelivery?: MaterialDeliveryInfo;
 }
 
 @Injectable({

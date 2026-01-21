@@ -53,7 +53,7 @@ export class MaterialTransferComponent implements OnInit {
   // Modals
   isTransferModalOpen = false;
   viewRow: (MaterialTransfer & { itemsSummary: any[] }) | null = null;
-  viewDeliveryRow: (MaterialDelivery & { itemsSummary: any[] }) | null = null;
+  viewDeliveryRow: (MaterialDelivery & { itemsSummary: any[], materialDelivery?: any }) | null = null;
   viewRowLoading = false;
   isAssignModalOpen = false;
   selectedOrderForAssign: MaterialTransfer | null = null;
@@ -119,6 +119,10 @@ export class MaterialTransferComponent implements OnInit {
       filter: 'agDateColumnFilter',
       minWidth: 150,
       cellRenderer: (params: any) => {
+        // Show actual delivery time if status is Delivered
+        if (params.data.materialDelivery && params.data.materialDelivery.deliveryStatus === 'Delivered') {
+          return this.formatDateTime(params.data.materialDelivery.actualDeliveryTime);
+        }
         return this.formatDateTime(params.value);
       }
     },
@@ -128,7 +132,14 @@ export class MaterialTransferComponent implements OnInit {
       sortable: true,
       filter: 'agTextColumnFilter',
       flex: 1,
-      minWidth: 150
+      minWidth: 150,
+      cellRenderer: (params: any) => {
+        // Show actual delivered by if status is Delivered
+        if (params.data.materialDelivery && params.data.materialDelivery.deliveryStatus === 'Delivered') {
+          return params.data.materialDelivery.actualDeliveryBy;
+        }
+        return params.value;
+      }
     },
     {
       headerName: 'Status',
@@ -352,10 +363,39 @@ export class MaterialTransferComponent implements OnInit {
     this.hasError = false;
 
     this.materialTransferService.getMaterialDeliveries().subscribe({
-      next: (data) => {
-        this.transfers = data;
-        this.loading = false;
-        this.hasError = false;
+      next: (deliveries) => {
+        // Fetch order details for each delivery to get materialDelivery info
+        if (deliveries && deliveries.length > 0) {
+          const orderRequests = deliveries.map(delivery => 
+            this.orderService.getOrder(delivery.orderId).pipe(
+              map(order => ({
+                ...delivery,
+                materialDelivery: order.materialDelivery
+              }))
+            )
+          );
+
+          forkJoin(orderRequests).subscribe({
+            next: (enrichedDeliveries) => {
+              this.transfers = enrichedDeliveries;
+              this.loading = false;
+              this.hasError = false;
+              this.cdr.detectChanges();
+            },
+            error: (error) => {
+              console.error('Error enriching deliveries with order data:', error);
+              // Fallback to original data without materialDelivery
+              this.transfers = deliveries;
+              this.loading = false;
+              this.hasError = false;
+              this.cdr.detectChanges();
+            }
+          });
+        } else {
+          this.transfers = deliveries;
+          this.loading = false;
+          this.hasError = false;
+        }
       },
       error: (error) => {
         console.error('Error fetching material deliveries:', error);
@@ -587,7 +627,8 @@ export class MaterialTransferComponent implements OnInit {
 
                   this.viewDeliveryRow = {
                     ...delivery,
-                    itemsSummary: itemsSummary
+                    itemsSummary: itemsSummary,
+                    materialDelivery: order.materialDelivery
                   };
                   this.viewRowLoading = false;
                   this.cdr.detectChanges();
@@ -607,7 +648,8 @@ export class MaterialTransferComponent implements OnInit {
                   ];
                   this.viewDeliveryRow = {
                     ...delivery,
-                    itemsSummary: itemsSummary
+                    itemsSummary: itemsSummary,
+                    materialDelivery: order.materialDelivery
                   };
                   this.viewRowLoading = false;
                   this.cdr.detectChanges();
@@ -618,7 +660,8 @@ export class MaterialTransferComponent implements OnInit {
               const itemsSummary = (order.items || []).filter(item => item.manual);
               this.viewDeliveryRow = {
                 ...delivery,
-                itemsSummary: itemsSummary
+                itemsSummary: itemsSummary,
+                materialDelivery: order.materialDelivery
               };
               this.viewRowLoading = false;
               this.cdr.detectChanges();
@@ -959,9 +1002,20 @@ export class MaterialTransferComponent implements OnInit {
       const month = months[date.getMonth()];
       const year = date.getFullYear();
       
+      // If timeStr is provided separately (HH:mm format)
       if (timeStr) {
-        // Parse time string (assuming HH:mm format)
         const [hours, minutes] = timeStr.split(':').map(Number);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        
+        return `${day}-${month}-${year} ${String(displayHours).padStart(2, '0')}:${displayMinutes} ${ampm}`;
+      }
+      
+      // Check if dateStr contains time (e.g., "2026-01-21 18:48:08")
+      if (dateStr.includes(':')) {
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
         const ampm = hours >= 12 ? 'PM' : 'AM';
         const displayHours = hours % 12 || 12;
         const displayMinutes = String(minutes).padStart(2, '0');

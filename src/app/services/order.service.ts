@@ -9,12 +9,22 @@ export interface OrderItem {
   name: string;
   manual?: boolean;
   isGroup?: boolean;
+  itemGroupName?: string;
+  quantity?: number;
 }
 
 export interface ItemGroup {
   id: string;
   name: string;
   items: OrderItem[];
+}
+
+export interface MaterialDeliveryInfo {
+  deliveryStatus: string;
+  actualDeliveryBy: string;
+  actualDeliveryByUserId: number;
+  actualDeliveryTime: string;
+  remarks: string;
 }
 
 export interface Order {
@@ -33,7 +43,9 @@ export interface Order {
   remarks: string;
   createdBy: string;
   status: string;
+  isDelivered?: string;
   audits: OrderAudit[];
+  materialDelivery?: MaterialDeliveryInfo;
 }
 
 export interface OrderAudit {
@@ -107,7 +119,9 @@ export class OrderService {
           remarks: order.remarks || '',
           createdBy: order.createdBy || '',
           status: order.status || 'Draft',
-          audits: order.audits || []
+          isDelivered: order.isDelivered,
+          audits: order.audits || [],
+          materialDelivery: order.materialDelivery
         };
       })
     );

@@ -7,7 +7,11 @@ import { ActionDropdownComponent } from '../action-dropdown/action-dropdown.comp
 import { ToastService } from '../../services/toast.service';
 import { MaterialTransferService, MaterialTransfer, MaterialTransferFormData, MaterialDelivery, DeliveryUser } from '../../services/material-transfer.service';
 import { OrderService, Order } from '../../services/order.service';
+import { ItemGroupService } from '../../services/item-group.service';
+import { ItemService } from '../../services/item.service';
 import { AuthService } from '../../services/auth.service';
+import { forkJoin, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 @Component({
   selector: 'app-material-delivery',
@@ -40,6 +44,8 @@ export class MaterialDeliveryComponent implements OnInit {
   showMarkDeliveredModal = false;
   markDeliveredRemarks = '';
   markingDelivered = false;
+  isItemsSummaryCollapsed = false;
+  expandedGroups: Set<string> = new Set();
 
   actionItems = [
     [
@@ -62,6 +68,8 @@ export class MaterialDeliveryComponent implements OnInit {
     private cdr: ChangeDetectorRef,
     private materialTransferService: MaterialTransferService,
     private orderService: OrderService,
+    private itemGroupService: ItemGroupService,
+    private itemService: ItemService,
     private toastService: ToastService,
     private router: Router,
     private authService: AuthService
@@ -132,7 +140,7 @@ export class MaterialDeliveryComponent implements OnInit {
   clearFilters(): void {
     this.searchTerm = '';
     this.selectedStatus = 'Assigned';
-    this.applyFilters();
+    this.fetchData(); // Refetch data from backend
   }
 
   openFilterModal(): void {
@@ -144,7 +152,7 @@ export class MaterialDeliveryComponent implements OnInit {
   }
 
   applyAndCloseFilter(): void {
-    this.applyFilters();
+    this.fetchData(); // Refetch data from backend with updated status
     this.closeFilterModal();
   }
 
@@ -171,28 +179,119 @@ export class MaterialDeliveryComponent implements OnInit {
     if (!delivery) return;
 
     this.viewRowLoading = true;
+    this.expandedGroups.clear(); // Reset expanded state
 
     this.orderService.getOrder(delivery.orderId).subscribe({
       next: (order: Order) => {
-        // Combine itemGroups and items into itemsSummary
-        const itemsSummary = [
-          // Add item groups as items with isGroup flag
-          ...(order.itemGroups || []).map(groupName => ({
-            id: '',
-            name: groupName,
-            manual: false,
-            isGroup: true
-          })),
-          // Add individual items
-          ...(order.items || [])
-        ];
+        // First, get all item groups to map names to IDs
+        this.itemGroupService.getAllItemGroups('Y').subscribe({
+          next: (allItemGroups) => {
+            // Create map of group name to ID
+            const groupNameToId = new Map<string, number>();
+            allItemGroups.forEach(group => {
+              groupNameToId.set(group.name, group.itemGroupId);
+            });
 
-        this.viewDeliveryRow = {
-          ...delivery,
-          itemsSummary: itemsSummary
-        };
-        this.viewRowLoading = false;
-        this.cdr.detectChanges();
+            // Fetch items for each group
+            const groupItemRequests = (order.itemGroups || []).map(groupName => {
+              const groupId = groupNameToId.get(groupName);
+              if (groupId) {
+                return this.itemService.getItemsByItemGroup(groupId).pipe(
+                  map(items => ({
+                    groupName,
+                    items: items.map(item => ({
+                      id: item.itemId?.toString() || '',
+                      name: item.name,
+                      manual: false,
+                      isGroup: false
+                    }))
+                  }))
+                );
+              }
+              return of({ groupName, items: [] });
+            });
+
+            // Wait for all group items to be fetched
+            if (groupItemRequests.length > 0) {
+              forkJoin(groupItemRequests).subscribe({
+                next: (groupsWithItems) => {
+                  // Build the items summary with groups and their items
+                  const groupedItems = groupsWithItems.map(gwi => ({
+                    id: '',
+                    name: gwi.groupName,
+                    manual: false,
+                    isGroup: true,
+                    children: gwi.items
+                  }));
+
+                  // Add manual items as standalone
+                  const standaloneItems = (order.items || []).filter(item => item.manual).map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    manual: true,
+                    isGroup: false
+                  }));
+
+                  // Combine groups and standalone items
+                  const itemsSummary = [...groupedItems, ...standaloneItems];
+
+                  this.viewDeliveryRow = {
+                    ...delivery,
+                    itemsSummary: itemsSummary
+                  };
+                  this.viewRowLoading = false;
+                  this.cdr.detectChanges();
+                },
+                error: (error: any) => {
+                  console.error('Error fetching group items:', error);
+                  this.toastService.error('Failed to load group items');
+                  // Fallback: show groups without items
+                  const itemsSummary = [
+                    ...(order.itemGroups || []).map(groupName => ({
+                      id: '',
+                      name: groupName,
+                      manual: false,
+                      isGroup: true,
+                      children: []
+                    })),
+                    ...(order.items || []).filter(item => item.manual).map(item => ({
+                      id: item.id,
+                      name: item.name,
+                      manual: true,
+                      isGroup: false
+                    }))
+                  ];
+                  this.viewDeliveryRow = {
+                    ...delivery,
+                    itemsSummary: itemsSummary
+                  };
+                  this.viewRowLoading = false;
+                  this.cdr.detectChanges();
+                }
+              });
+            } else {
+              // No groups, just show manual items
+              const itemsSummary = (order.items || []).filter(item => item.manual).map(item => ({
+                id: item.id,
+                name: item.name,
+                manual: true,
+                isGroup: false
+              }));
+              this.viewDeliveryRow = {
+                ...delivery,
+                itemsSummary: itemsSummary
+              };
+              this.viewRowLoading = false;
+              this.cdr.detectChanges();
+            }
+          },
+          error: (error: any) => {
+            console.error('Error fetching item groups:', error);
+            this.toastService.error('Failed to load item groups');
+            this.viewRowLoading = false;
+            this.cdr.detectChanges();
+          }
+        });
       },
       error: (error: any) => {
         console.error('Error fetching order details:', error);
@@ -205,6 +304,24 @@ export class MaterialDeliveryComponent implements OnInit {
 
   closeViewModal(): void {
     this.viewDeliveryRow = null;
+    this.isItemsSummaryCollapsed = false;
+    this.expandedGroups.clear();
+  }
+
+  toggleItemsSummary(): void {
+    this.isItemsSummaryCollapsed = !this.isItemsSummaryCollapsed;
+  }
+
+  toggleGroup(groupName: string): void {
+    if (this.expandedGroups.has(groupName)) {
+      this.expandedGroups.delete(groupName);
+    } else {
+      this.expandedGroups.add(groupName);
+    }
+  }
+
+  isGroupExpanded(groupName: string): boolean {
+    return this.expandedGroups.has(groupName);
   }
 
   exportCSV(): void {
@@ -242,6 +359,43 @@ export class MaterialDeliveryComponent implements OnInit {
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  formatDateTime(dateStr: string, timeStr?: string): string {
+    if (!dateStr) return 'N/A';
+
+    try {
+      // Parse date string (assuming format: yyyy-MM-dd or ISO format)
+      const dateParts = dateStr.split('T')[0].split('-');
+      if (dateParts.length !== 3) return dateStr;
+
+      const year = dateParts[0];
+      const month = parseInt(dateParts[1], 10);
+      const day = parseInt(dateParts[2], 10);
+
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const monthName = monthNames[month - 1] || '';
+
+      let formattedDate = `${day.toString().padStart(2, '0')}-${monthName}-${year}`;
+
+      // If time is provided, format it as well
+      if (timeStr) {
+        // Parse time (assuming format: HH:mm:ss or HH:mm)
+        const timeParts = timeStr.split(':');
+        if (timeParts.length >= 2) {
+          let hours = parseInt(timeParts[0], 10);
+          const minutes = timeParts[1];
+          const period = hours >= 12 ? 'PM' : 'AM';
+          hours = hours % 12 || 12;
+          formattedDate += ` ${hours}:${minutes} ${period}`;
+        }
+      }
+
+      return formattedDate;
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateStr;
+    }
   }
 
   openMarkDeliveredModal(): void {

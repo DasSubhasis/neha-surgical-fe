@@ -270,8 +270,8 @@
               </div>
             </div>
 
-            <!-- Delivery Information Card -->
-            <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <!-- Delivery Information Card - Show when status is Assigned or Pending -->
+            <div *ngIf="!viewDeliveryRow.materialDelivery || (viewDeliveryRow.materialDelivery.deliveryStatus !== 'Delivered')" class="bg-green-50 border border-green-200 rounded-lg p-4">
               <div class="text-sm font-bold text-green-900 mb-3 pb-2 border-b border-green-200">Delivery Information</div>
               <div class="space-y-3">
                 <div class="grid grid-cols-2 gap-3">
@@ -292,15 +292,34 @@
                   <div class="text-xs font-bold text-green-800 mb-1">Remarks</div>
                   <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.remarks || 'N/A' }}</div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Actual Delivery Information Card - Show when status is Delivered -->
+            <div *ngIf="viewDeliveryRow.materialDelivery && viewDeliveryRow.materialDelivery.deliveryStatus === 'Delivered'" class="bg-teal-50 border border-teal-200 rounded-lg p-4">
+              <div class="text-sm font-bold text-teal-900 mb-3 pb-2 border-b border-teal-200">Actual Delivery Information</div>
+              <div class="space-y-3">
                 <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <div class="text-xs font-bold text-green-800 mb-1">Created By</div>
-                    <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.createdBy }}</div>
+                    <div class="text-xs font-bold text-teal-800 mb-1">Delivery Status</div>
+                    <div class="text-base font-bold" [ngClass]="{
+                      'text-green-700': viewDeliveryRow.materialDelivery.deliveryStatus === 'Delivered',
+                      'text-orange-700': viewDeliveryRow.materialDelivery.deliveryStatus === 'Pending',
+                      'text-teal-700': viewDeliveryRow.materialDelivery.deliveryStatus !== 'Delivered' && viewDeliveryRow.materialDelivery.deliveryStatus !== 'Pending'
+                    }">{{ viewDeliveryRow.materialDelivery.deliveryStatus }}</div>
                   </div>
                   <div>
-                    <div class="text-xs font-bold text-green-800 mb-1">Created At</div>
-                    <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewDeliveryRow.createdAt) }}</div>
+                    <div class="text-xs font-bold text-teal-800 mb-1">Actual Delivery Time</div>
+                    <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewDeliveryRow.materialDelivery.actualDeliveryTime) }}</div>
                   </div>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-teal-800 mb-1">Actual Delivered By</div>
+                  <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.materialDelivery.actualDeliveryBy }}</div>
+                </div>
+                <div>
+                  <div class="text-xs font-bold text-teal-800 mb-1">Delivery Remarks</div>
+                  <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.materialDelivery.remarks || 'N/A' }}</div>
                 </div>
               </div>
             </div>
