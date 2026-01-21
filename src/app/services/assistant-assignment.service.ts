@@ -9,6 +9,14 @@ export interface Assistant {
   name: string;
   phone: string;
   email: string;
+  userId?: number;
+  username?: string;
+  fullName?: string;
+  employeeId?: string;
+  identifier?: string;
+  roleId?: number;
+  roleName?: string;
+  isActive?: string;
 }
 
 export interface OrderItem {
@@ -96,10 +104,34 @@ export class AssistantAssignmentService {
   }
 
   getAssistants(): Observable<Assistant[]> {
-    return this.apiService.get<ApiResponse<Assistant[]>>(
-      ENDPOINTS.ASSISTANT_ASSIGNMENTS.ASSISTANTS
+    return this.apiService.get<ApiResponse<any[]>>(
+      '/Users/non-admin?isActive=Y'
     ).pipe(
-      map(response => response.data || [])
+      map(response => {
+        const users = response.data || [];
+        return users.map((user: any) => {
+          // Create combined display name: fullName - employeeId - identifier
+          const nameParts = [user.fullName];
+          if (user.employeeId) nameParts.push(user.employeeId);
+          if (user.identifier) nameParts.push(user.identifier);
+          const displayName = nameParts.join(' - ');
+
+          return {
+            id: user.userId,
+            name: displayName,
+            phone: user.phone || '',
+            email: user.email || '',
+            userId: user.userId,
+            username: user.username,
+            fullName: user.fullName,
+            employeeId: user.employeeId,
+            identifier: user.identifier,
+            roleId: user.roleId,
+            roleName: user.roleName,
+            isActive: user.isActive
+          };
+        });
+      })
     );
   }
 
