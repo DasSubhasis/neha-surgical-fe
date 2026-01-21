@@ -10,6 +10,10 @@ import { ActionDropdownComponent } from '../action-dropdown/action-dropdown.comp
 import { ToastService } from '../../services/toast.service';
 import { MaterialTransferService, MaterialTransfer, MaterialTransferFormData, MaterialDelivery, DeliveryUser } from '../../services/material-transfer.service';
 import { OrderService, Order } from '../../services/order.service';
+import { ItemGroupService } from '../../services/item-group.service';
+import { ItemService } from '../../services/item.service';
+import { forkJoin, of } from 'rxjs';
+import { map } from 'rxjs/operators';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -55,6 +59,7 @@ export class MaterialTransferComponent implements OnInit {
   selectedOrderForAssign: MaterialTransfer | null = null;
   assignLoading = false;
   deliveryUsers: DeliveryUser[] = [];
+  expandedGroups: Map<string, boolean> = new Map();
 
   // Transfer form
   transferForm: MaterialTransferFormData = {
@@ -88,19 +93,34 @@ export class MaterialTransferComponent implements OnInit {
   // AG Grid configuration
   columnDefs: ColDef[] = [
     {
-      headerName: 'Order No',
-      field: 'orderNo',
+      headerName: 'Operation Date/Time',
+      field: 'operationDate',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      minWidth: 180,
+      cellRenderer: (params: any) => {
+        const date = params.data.operationDate;
+        const time = params.data.operationTime;
+        return this.formatDateTime(date, time);
+      }
+    },
+    {
+      headerName: 'Doctor',
+      field: 'doctorName',
       sortable: true,
       filter: 'agTextColumnFilter',
-      minWidth: 130,
-      flex: 1
+      flex: 1.5,
+      minWidth: 150
     },
     {
       headerName: 'Delivery Date',
       field: 'deliveryDate',
       sortable: true,
       filter: 'agDateColumnFilter',
-      minWidth: 120
+      minWidth: 150,
+      cellRenderer: (params: any) => {
+        return this.formatDateTime(params.value);
+      }
     },
     {
       headerName: 'Delivered By',
@@ -183,23 +203,16 @@ export class MaterialTransferComponent implements OnInit {
   // Pending Orders AG Grid configuration
   pendingOrdersColumnDefs: ColDef[] = [
     {
-      headerName: 'Order No',
-      field: 'orderNo',
+      headerName: 'Operation Date/Time',
+      field: 'operationDate',
       sortable: true,
-      filter: 'agTextColumnFilter',
-      flex: 1,
-      minWidth: 100,
+      filter: 'agDateColumnFilter',
+      minWidth: 180,
       cellRenderer: (params: any) => {
-        return `<span class="font-medium text-gray-900">${params.value}</span>`;
+        const date = params.data.operationDate;
+        const time = params.data.operationTime;
+        return this.formatDateTime(date, time);
       }
-    },
-    {
-      headerName: 'Hospital',
-      field: 'hospitalName',
-      sortable: true,
-      filter: 'agTextColumnFilter',
-      flex: 1.5,
-      minWidth: 150
     },
     {
       headerName: 'Doctor',
@@ -210,11 +223,12 @@ export class MaterialTransferComponent implements OnInit {
       minWidth: 150
     },
     {
-      headerName: 'Operation Date',
-      field: 'operationDate',
+      headerName: 'Hospital',
+      field: 'hospitalName',
       sortable: true,
-      filter: 'agDateColumnFilter',
-      minWidth: 110
+      filter: 'agTextColumnFilter',
+      flex: 1.5,
+      minWidth: 150
     },
     {
       headerName: 'Material Send',
@@ -322,7 +336,9 @@ export class MaterialTransferComponent implements OnInit {
     private materialTransferService: MaterialTransferService,
     private orderService: OrderService,
     private toastService: ToastService,
-    private router: Router
+    private router: Router,
+    private itemGroupService: ItemGroupService,
+    private itemService: ItemService
   ) {}
 
   ngOnInit(): void {
@@ -518,28 +534,103 @@ export class MaterialTransferComponent implements OnInit {
     if (!delivery) return;
 
     this.viewRowLoading = true;
+    this.expandedGroups.clear(); // Reset expanded state
 
     this.orderService.getOrder(delivery.orderId).subscribe({
       next: (order: Order) => {
-        // Combine itemGroups and items into itemsSummary
-        const itemsSummary = [
-          // Add item groups as items with isGroup flag
-          ...(order.itemGroups || []).map(groupName => ({
-            id: '',
-            name: groupName,
-            manual: false,
-            isGroup: true
-          })),
-          // Add individual items
-          ...(order.items || [])
-        ];
+        // First, get all item groups to map names to IDs
+        this.itemGroupService.getAllItemGroups('Y').subscribe({
+          next: (allItemGroups) => {
+            // Create map of group name to ID
+            const groupNameToId = new Map<string, number>();
+            allItemGroups.forEach(group => {
+              groupNameToId.set(group.name, group.itemGroupId);
+            });
 
-        this.viewDeliveryRow = {
-          ...delivery,
-          itemsSummary: itemsSummary
-        };
-        this.viewRowLoading = false;
-        this.cdr.detectChanges();
+            // Fetch items for each group
+            const groupItemRequests = (order.itemGroups || []).map(groupName => {
+              const groupId = groupNameToId.get(groupName);
+              if (groupId) {
+                return this.itemService.getItemsByItemGroup(groupId).pipe(
+                  map(items => ({
+                    groupName,
+                    items: items.map(item => ({
+                      id: item.itemId?.toString() || '',
+                      name: item.name,
+                      manual: false,
+                      isGroup: false
+                    }))
+                  }))
+                );
+              }
+              return of({ groupName, items: [] });
+            });
+
+            // Wait for all group items to be fetched
+            if (groupItemRequests.length > 0) {
+              forkJoin(groupItemRequests).subscribe({
+                next: (groupsWithItems) => {
+                  // Build the items summary with groups and their items
+                  const groupedItems = groupsWithItems.map(gwi => ({
+                    id: '',
+                    name: gwi.groupName,
+                    manual: false,
+                    isGroup: true,
+                    items: gwi.items
+                  }));
+
+                  // Add manual items as standalone
+                  const standaloneItems = (order.items || []).filter(item => item.manual);
+
+                  // Combine groups and standalone items
+                  const itemsSummary = [...groupedItems, ...standaloneItems];
+
+                  this.viewDeliveryRow = {
+                    ...delivery,
+                    itemsSummary: itemsSummary
+                  };
+                  this.viewRowLoading = false;
+                  this.cdr.detectChanges();
+                },
+                error: (error: any) => {
+                  console.error('Error fetching group items:', error);
+                  // Fallback: show groups without items
+                  const itemsSummary = [
+                    ...(order.itemGroups || []).map(groupName => ({
+                      id: '',
+                      name: groupName,
+                      manual: false,
+                      isGroup: true,
+                      items: []
+                    })),
+                    ...(order.items || []).filter(item => item.manual)
+                  ];
+                  this.viewDeliveryRow = {
+                    ...delivery,
+                    itemsSummary: itemsSummary
+                  };
+                  this.viewRowLoading = false;
+                  this.cdr.detectChanges();
+                }
+              });
+            } else {
+              // No groups, just show manual items
+              const itemsSummary = (order.items || []).filter(item => item.manual);
+              this.viewDeliveryRow = {
+                ...delivery,
+                itemsSummary: itemsSummary
+              };
+              this.viewRowLoading = false;
+              this.cdr.detectChanges();
+            }
+          },
+          error: (error: any) => {
+            console.error('Error fetching item groups:', error);
+            this.toastService.error('Failed to load item groups');
+            this.viewRowLoading = false;
+            this.cdr.detectChanges();
+          }
+        });
       },
       error: (error: any) => {
         console.error('Error fetching order details:', error);
@@ -555,31 +646,106 @@ export class MaterialTransferComponent implements OnInit {
     if (!pendingOrder) return;
 
     this.viewRowLoading = true;
+    this.expandedGroups.clear(); // Reset expanded state
     console.log('Fetching order details for ID:', orderId);
 
     this.orderService.getOrder(orderId).subscribe({
       next: (order: Order) => {
         console.log('Order details received:', order);
-        // Combine itemGroups and items into itemsSummary
-        const itemsSummary = [
-          // Add item groups as items with isGroup flag
-          ...(order.itemGroups || []).map(groupName => ({
-            id: '',
-            name: groupName,
-            manual: false,
-            isGroup: true
-          })),
-          // Add individual items
-          ...(order.items || [])
-        ];
+        // First, get all item groups to map names to IDs
+        this.itemGroupService.getAllItemGroups('Y').subscribe({
+          next: (allItemGroups) => {
+            // Create map of group name to ID
+            const groupNameToId = new Map<string, number>();
+            allItemGroups.forEach(group => {
+              groupNameToId.set(group.name, group.itemGroupId);
+            });
 
-        this.viewRow = {
-          ...pendingOrder,
-          itemsSummary: itemsSummary
-        };
-        console.log('View row set:', this.viewRow);
-        this.viewRowLoading = false;
-        this.cdr.detectChanges();
+            // Fetch items for each group
+            const groupItemRequests = (order.itemGroups || []).map(groupName => {
+              const groupId = groupNameToId.get(groupName);
+              if (groupId) {
+                return this.itemService.getItemsByItemGroup(groupId).pipe(
+                  map(items => ({
+                    groupName,
+                    items: items.map(item => ({
+                      id: item.itemId?.toString() || '',
+                      name: item.name,
+                      manual: false,
+                      isGroup: false
+                    }))
+                  }))
+                );
+              }
+              return of({ groupName, items: [] });
+            });
+
+            // Wait for all group items to be fetched
+            if (groupItemRequests.length > 0) {
+              forkJoin(groupItemRequests).subscribe({
+                next: (groupsWithItems) => {
+                  // Build the items summary with groups and their items
+                  const groupedItems = groupsWithItems.map(gwi => ({
+                    id: '',
+                    name: gwi.groupName,
+                    manual: false,
+                    isGroup: true,
+                    items: gwi.items
+                  }));
+
+                  // Add manual items as standalone
+                  const standaloneItems = (order.items || []).filter(item => item.manual);
+
+                  // Combine groups and standalone items
+                  const itemsSummary = [...groupedItems, ...standaloneItems];
+
+                  this.viewRow = {
+                    ...pendingOrder,
+                    itemsSummary: itemsSummary
+                  };
+                  console.log('View row set:', this.viewRow);
+                  this.viewRowLoading = false;
+                  this.cdr.detectChanges();
+                },
+                error: (error: any) => {
+                  console.error('Error fetching group items:', error);
+                  // Fallback: show groups without items
+                  const itemsSummary = [
+                    ...(order.itemGroups || []).map(groupName => ({
+                      id: '',
+                      name: groupName,
+                      manual: false,
+                      isGroup: true,
+                      items: []
+                    })),
+                    ...(order.items || []).filter(item => item.manual)
+                  ];
+                  this.viewRow = {
+                    ...pendingOrder,
+                    itemsSummary: itemsSummary
+                  };
+                  this.viewRowLoading = false;
+                  this.cdr.detectChanges();
+                }
+              });
+            } else {
+              // No groups, just show manual items
+              const itemsSummary = (order.items || []).filter(item => item.manual);
+              this.viewRow = {
+                ...pendingOrder,
+                itemsSummary: itemsSummary
+              };
+              this.viewRowLoading = false;
+              this.cdr.detectChanges();
+            }
+          },
+          error: (error: any) => {
+            console.error('Error fetching item groups:', error);
+            this.toastService.error('Failed to load item groups');
+            this.viewRowLoading = false;
+            this.cdr.detectChanges();
+          }
+        });
       },
       error: (error: any) => {
         console.error('Error fetching order details:', error);
@@ -780,5 +946,46 @@ export class MaterialTransferComponent implements OnInit {
 
   getDeliveryUserDisplay(user: DeliveryUser): string {
     return `${user.fullName}-${user.employeeId || ''}-${user.identifier || ''}`;
+  }
+
+  formatDateTime(dateStr: string, timeStr?: string): string {
+    if (!dateStr) return '';
+    
+    try {
+      const date = new Date(dateStr);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      
+      if (timeStr) {
+        // Parse time string (assuming HH:mm format)
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        
+        return `${day}-${month}-${year} ${String(displayHours).padStart(2, '0')}:${displayMinutes} ${ampm}`;
+      }
+      
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      return dateStr;
+    }
+  }
+
+  toggleGroup(groupName: string): void {
+    const isExpanded = this.expandedGroups.get(groupName) || false;
+    this.expandedGroups.set(groupName, !isExpanded);
+  }
+
+  isGroupExpanded(groupName: string): boolean {
+    return this.expandedGroups.get(groupName) || false;
+  }
+
+  getGroupItems(item: any): any[] {
+    // Return items array from the group object
+    return item.items || [];
   }
 }

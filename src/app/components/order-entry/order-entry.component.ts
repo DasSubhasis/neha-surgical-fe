@@ -89,21 +89,17 @@ export class OrderEntryComponent implements OnInit {
   // AG Grid column definitions
   columnDefs: ColDef[] = [
     { 
-      headerName: 'Order No', 
-      field: 'orderNo', 
-      sortable: true, 
-      filter: 'agTextColumnFilter', 
-      flex: 1, 
-      minWidth: 140 
-    },
-    { 
-      headerName: 'Order Date', 
-      field: 'orderDate', 
+      headerName: 'Operation Date/Time', 
+      field: 'operationDate', 
       sortable: true, 
       filter: 'agDateColumnFilter', 
-      width: 120, 
-      minWidth: 120,
-      valueFormatter: (params: any) => this.formatDate(params.value)
+      width: 150,
+      minWidth: 150,
+      cellRenderer: (params: any) => {
+        const date = params.data.operationDate;
+        const time = params.data.operationTime;
+        return this.formatDateTime(date, time);
+      }
     },
     { 
       headerName: 'Doctor', 
@@ -122,16 +118,7 @@ export class OrderEntryComponent implements OnInit {
       minWidth: 150 
     },
     { 
-      headerName: 'Op Date', 
-      field: 'operationDate', 
-      sortable: true, 
-      filter: 'agDateColumnFilter', 
-      width: 120, 
-      minWidth: 120,
-      valueFormatter: (params: any) => this.formatDate(params.value)
-    },
-    { 
-      headerName: 'Material Send', 
+      headerName: 'Material to be Send', 
       field: 'materialSendDate', 
       sortable: true, 
       filter: 'agDateColumnFilter', 
@@ -284,6 +271,33 @@ export class OrderEntryComponent implements OnInit {
   formatTime(timeString: string | undefined): string {
     if (!timeString) return '';
     return timeString;
+  }
+
+  formatDateTime(dateStr: string, timeStr?: string): string {
+    if (!dateStr) return '';
+    
+    try {
+      const date = new Date(dateStr);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      
+      if (timeStr) {
+        // Parse time string (assuming HH:mm format)
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        
+        return `${day}-${month}-${year} ${String(displayHours).padStart(2, '0')}:${displayMinutes} ${ampm}`;
+      }
+      
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      return dateStr;
+    }
   }
 
   getItemGroupNames(itemGroupNames: string[]): string {

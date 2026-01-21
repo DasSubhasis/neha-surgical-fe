@@ -122,12 +122,8 @@
           <!-- Left Column - Order Details -->
           <div class="md:col-span-1 space-y-4">
             <div>
-              <div class="text-xs font-bold text-indigo-800 mb-1">Order No</div>
-              <div class="text-sm font-normal text-gray-800">{{ viewRow.orderNo }}</div>
-            </div>
-            <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Order Date</div>
-              <div class="text-sm font-normal text-gray-800">{{ viewRow.orderDate }}</div>
+              <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewRow.orderDate) }}</div>
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Doctor</div>
@@ -139,11 +135,11 @@
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Operation</div>
-              <div class="text-sm font-normal text-gray-800">{{ viewRow.operationDate }}</div>
+              <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewRow.operationDate, viewRow.operationTime) }}</div>
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Material Send Date</div>
-              <div class="text-sm font-normal text-gray-800">{{ viewRow.materialSendDate }}</div>
+              <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewRow.materialSendDate) }}</div>
             </div>
             <div>
               <div class="text-xs font-bold text-indigo-800 mb-1">Assistant Assigned</div>
@@ -168,27 +164,54 @@
           <div class="md:col-span-2">
             <div class="text-xs font-bold text-indigo-800 mb-2">Items Summary</div>
             <div class="border border-gray-300 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow duration-200 max-h-96 overflow-y-auto">
-              <table *ngIf="viewRow.itemsSummary && viewRow.itemsSummary.length > 0" class="w-full text-sm">
-                <thead class="bg-gray-300 text-black-700 border-b sticky top-0 z-10">
-                  <tr>
-                    <th class="text-left py-2 px-2 font-medium">Item / Group</th>
-                    <th class="text-right py-2 px-4 font-medium">Type</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-yellow-50">
-                  <tr *ngFor="let item of viewRow.itemsSummary" class="border-b last:border-b-0 hover:bg-gray-50">
-                    <td class="py-2 px-2" [class.font-semibold]="item.isGroup" [class.text-indigo-700]="item.isGroup">
-                      {{ item.name }}
-                      <span *ngIf="item.isGroup" class="ml-1 text-xs text-gray-500">(Group)</span>
-                    </td>
-                    <td class="py-2 px-2 text-right text-xs text-gray-600">
-                      <span *ngIf="item.isGroup" class="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Group</span>
-                      <span *ngIf="!item.isGroup && item.manual" class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">Manual</span>
-                      <span *ngIf="!item.isGroup && !item.manual" class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Auto</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div *ngIf="viewRow.itemsSummary && viewRow.itemsSummary.length > 0" class="divide-y divide-gray-200">
+                <!-- Item Groups (Collapsible) and Individual Items -->
+                <div *ngFor="let item of viewRow.itemsSummary">
+                  <!-- Group Header (Collapsible) -->
+                  <div *ngIf="item.isGroup">
+                    <div 
+                      (click)="toggleGroup(item.name)"
+                      class="px-4 py-3 bg-purple-50 hover:bg-purple-100 cursor-pointer transition-colors duration-150 flex items-center justify-between">
+                      <div class="flex items-center space-x-2">
+                        <!-- Expand/Collapse Icon -->
+                        <svg 
+                          class="w-4 h-4 text-purple-600 transition-transform duration-200"
+                          [class.rotate-90]="isGroupExpanded(item.name)"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span class="font-semibold text-purple-700">{{ item.name }}</span>
+                        <span class="text-xs text-gray-500">(Group)</span>
+                      </div>
+                      <span class="px-2 py-1 bg-purple-200 text-purple-800 rounded-full text-xs font-medium">Group</span>
+                    </div>
+                    
+                    <!-- Group Items (Expanded) -->
+                    <div *ngIf="isGroupExpanded(item.name)" class="bg-purple-25">
+                      <div 
+                        *ngFor="let groupItem of getGroupItems(item)"
+                        class="px-4 py-2 pl-10 hover:bg-gray-50 border-l-2 border-purple-300 flex items-center justify-between">
+                        <span class="text-sm text-gray-700">{{ groupItem.name }}</span>
+                        <span *ngIf="groupItem.manual" class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">Manual</span>
+                        <span *ngIf="!groupItem.manual" class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Auto</span>
+                      </div>
+                      <div *ngIf="getGroupItems(item).length === 0" class="px-4 py-2 pl-10 text-sm text-gray-500 italic">
+                        No items in this group
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Individual Items (Not in groups) -->
+                  <div *ngIf="!item.isGroup" 
+                    class="px-4 py-3 hover:bg-gray-50 transition-colors duration-150 flex items-center justify-between">
+                    <span class="text-sm text-gray-700">{{ item.name }}</span>
+                    <span *ngIf="item.manual" class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">Manual</span>
+                    <span *ngIf="!item.manual" class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Auto</span>
+                  </div>
+                </div>
+              </div>
               <div *ngIf="!viewRow.itemsSummary || viewRow.itemsSummary.length === 0" class="text-sm text-gray-500 p-3 text-center">
                 No items available
               </div>
@@ -228,15 +251,9 @@
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <div class="text-sm font-bold text-blue-900 mb-3 pb-2 border-b border-blue-200">Order Information</div>
               <div class="space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <div class="text-xs font-bold text-blue-800 mb-1">Order No</div>
-                    <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.orderNo }}</div>
-                  </div>
-                  <div>
-                    <div class="text-xs font-bold text-blue-800 mb-1">Operation Date</div>
-                    <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.operationDate }}{{ viewDeliveryRow.operationTime ? ' at ' + viewDeliveryRow.operationTime : '' }}</div>
-                  </div>
+                <div>
+                  <div class="text-xs font-bold text-blue-800 mb-1">Operation Date</div>
+                  <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewDeliveryRow.operationDate, viewDeliveryRow.operationTime) }}</div>
                 </div>
                 <div>
                   <div class="text-xs font-bold text-blue-800 mb-1">Doctor</div>
@@ -248,7 +265,7 @@
                 </div>
                 <div *ngIf="viewDeliveryRow.materialSendDate">
                   <div class="text-xs font-bold text-blue-800 mb-1">Material Send Date</div>
-                  <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.materialSendDate }}</div>
+                  <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewDeliveryRow.materialSendDate) }}</div>
                 </div>
               </div>
             </div>
@@ -260,7 +277,7 @@
                 <div class="grid grid-cols-2 gap-3">
                   <div>
                     <div class="text-xs font-bold text-green-800 mb-1">Delivery Date</div>
-                    <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.deliveryDate }}</div>
+                    <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewDeliveryRow.deliveryDate) }}</div>
                   </div>
                   <div>
                     <div class="text-xs font-bold text-green-800 mb-1">Delivery Status</div>
@@ -282,7 +299,7 @@
                   </div>
                   <div>
                     <div class="text-xs font-bold text-green-800 mb-1">Created At</div>
-                    <div class="text-sm font-normal text-gray-800">{{ viewDeliveryRow.createdAt }}</div>
+                    <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewDeliveryRow.createdAt) }}</div>
                   </div>
                 </div>
               </div>
@@ -293,27 +310,54 @@
           <div class="md:col-span-2">
             <div class="text-xs font-bold text-blue-800 mb-2">Items Summary</div>
             <div class="border border-gray-300 rounded-lg bg-white shadow-sm hover:shadow-md transition-shadow duration-200 max-h-96 overflow-y-auto">
-              <table *ngIf="viewDeliveryRow.itemsSummary && viewDeliveryRow.itemsSummary.length > 0" class="w-full text-sm">
-                <thead class="bg-gray-300 text-black-700 border-b sticky top-0 z-10">
-                  <tr>
-                    <th class="text-left py-2 px-2 font-medium">Item / Group</th>
-                    <th class="text-right py-2 px-4 font-medium">Type</th>
-                  </tr>
-                </thead>
-                <tbody class="bg-yellow-50">
-                  <tr *ngFor="let item of viewDeliveryRow.itemsSummary" class="border-b last:border-b-0 hover:bg-gray-50">
-                    <td class="py-2 px-2" [class.font-semibold]="item.isGroup" [class.text-blue-700]="item.isGroup">
-                      {{ item.name }}
-                      <span *ngIf="item.isGroup" class="ml-1 text-xs text-gray-500">(Group)</span>
-                    </td>
-                    <td class="py-2 px-2 text-right text-xs text-gray-600">
-                      <span *ngIf="item.isGroup" class="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs">Group</span>
-                      <span *ngIf="!item.isGroup && item.manual" class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">Manual</span>
-                      <span *ngIf="!item.isGroup && !item.manual" class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Auto</span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+              <div *ngIf="viewDeliveryRow.itemsSummary && viewDeliveryRow.itemsSummary.length > 0" class="divide-y divide-gray-200">
+                <!-- Item Groups (Collapsible) and Individual Items -->
+                <div *ngFor="let item of viewDeliveryRow.itemsSummary">
+                  <!-- Group Header (Collapsible) -->
+                  <div *ngIf="item.isGroup">
+                    <div 
+                      (click)="toggleGroup(item.name)"
+                      class="px-4 py-3 bg-purple-50 hover:bg-purple-100 cursor-pointer transition-colors duration-150 flex items-center justify-between">
+                      <div class="flex items-center space-x-2">
+                        <!-- Expand/Collapse Icon -->
+                        <svg 
+                          class="w-4 h-4 text-purple-600 transition-transform duration-200"
+                          [class.rotate-90]="isGroupExpanded(item.name)"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                        </svg>
+                        <span class="font-semibold text-purple-700">{{ item.name }}</span>
+                        <span class="text-xs text-gray-500">(Group)</span>
+                      </div>
+                      <span class="px-2 py-1 bg-purple-200 text-purple-800 rounded-full text-xs font-medium">Group</span>
+                    </div>
+                    
+                    <!-- Group Items (Expanded) -->
+                    <div *ngIf="isGroupExpanded(item.name)" class="bg-purple-25">
+                      <div 
+                        *ngFor="let groupItem of getGroupItems(item)"
+                        class="px-4 py-2 pl-10 hover:bg-gray-50 border-l-2 border-purple-300 flex items-center justify-between">
+                        <span class="text-sm text-gray-700">{{ groupItem.name }}</span>
+                        <span *ngIf="groupItem.manual" class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">Manual</span>
+                        <span *ngIf="!groupItem.manual" class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Auto</span>
+                      </div>
+                      <div *ngIf="getGroupItems(item).length === 0" class="px-4 py-2 pl-10 text-sm text-gray-500 italic">
+                        No items in this group
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Individual Items (Not in groups) -->
+                  <div *ngIf="!item.isGroup" 
+                    class="px-4 py-3 hover:bg-gray-50 transition-colors duration-150 flex items-center justify-between">
+                    <span class="text-sm text-gray-700">{{ item.name }}</span>
+                    <span *ngIf="item.manual" class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs">Manual</span>
+                    <span *ngIf="!item.manual" class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs">Auto</span>
+                  </div>
+                </div>
+              </div>
               <div *ngIf="!viewDeliveryRow.itemsSummary || viewDeliveryRow.itemsSummary.length === 0" class="text-sm text-gray-500 p-3 text-center">
                 No items available
               </div>
@@ -393,12 +437,6 @@
 
       <!-- Modal Body -->
       <div class="px-6 py-6 space-y-4">
-        <!-- Order Info -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div class="text-xs text-blue-800 font-semibold mb-1">Order No</div>
-          <div class="text-sm font-bold text-blue-900">{{ selectedOrderForAssign?.orderNo }}</div>
-        </div>
-
         <!-- Delivery Date -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">

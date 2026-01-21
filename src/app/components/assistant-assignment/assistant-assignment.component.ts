@@ -511,6 +511,33 @@ export class AssistantAssignmentComponent implements OnInit {
     return `${hours}:${minutes} ${period}`;
   }
 
+  formatDateTime(dateStr: string, timeStr?: string): string {
+    if (!dateStr) return '';
+    
+    try {
+      const date = new Date(dateStr);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      
+      if (timeStr) {
+        // Parse time string (assuming HH:mm format)
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const displayHours = hours % 12 || 12;
+        const displayMinutes = String(minutes).padStart(2, '0');
+        
+        return `${day}-${month}-${year} ${String(displayHours).padStart(2, '0')}:${displayMinutes} ${ampm}`;
+      }
+      
+      return `${day}-${month}-${year}`;
+    } catch (error) {
+      return dateStr;
+    }
+  }
+
   getCurrentDate(): string {
     const today = new Date();
     const year = today.getFullYear();

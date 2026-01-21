@@ -72,8 +72,13 @@
             <!-- Card Header -->
             <div class="flex justify-between items-start mb-3">
               <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
-                  <h3 class="text-base font-semibold text-gray-900">{{ assignment.doctorName }}</h3>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-semibold bg-indigo-100 text-indigo-800">
+                    <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {{ formatDateTime(assignment.operationDate, assignment.operationTime) }}
+                  </span>
                   <span 
                     class="inline-flex px-2 py-1 text-xs font-semibold rounded-full"
                     [class.bg-gray-100]="assignment.status === 'Pending'"
@@ -83,7 +88,8 @@
                   >
                     {{ assignment.status }}
                   </span>
-                </div>                
+                </div>
+                <h3 class="text-base font-semibold text-gray-900">{{ assignment.doctorName }}</h3>               
               </div>
               <button 
                 (click)="viewOrderDetails(assignment.id)"
@@ -117,17 +123,6 @@
                 <span class="text-gray-600">
                   <span class="font-medium">Assistant:</span> 
                   {{ assignment.assistantName || 'Unassigned' }}
-                </span>
-              </div>
-
-              <!-- Operation Date/Time -->
-              <div class="flex items-center text-sm">
-                <svg class="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span class="text-gray-600">
-                  <span class="font-medium">Operation Date:</span> 
-                  {{ assignment.operationDate | date:'dd-MMM-yyyy' }} at {{ formatTime(assignment.operationTime) }}
                 </span>
               </div>
 
@@ -361,13 +356,18 @@
               <!-- Card Header -->
               <div class="flex justify-between items-start mb-3">
                 <div class="flex-1">
-                  <div class="flex items-center gap-2 mb-1">
-                    <span class="text-base font-semibold text-gray-900">{{ order.doctorName }}</span>
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="inline-flex items-center px-3 py-1.5 rounded-md text-sm font-semibold bg-indigo-100 text-indigo-800">
+                      <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      {{ formatDateTime(order.operationDate, order.operationTime) }}
+                    </span>
                     <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
                       Pending
                     </span>
                   </div>
-                  <p class="text-sm text-gray-600">{{ order.operationDate | date:'dd-MMM-yyyy' }} at {{ formatTime(order.operationTime) }}</p>
+                  <h3 class="text-base font-semibold text-gray-900">{{ order.doctorName }}</h3>
                 </div>
                 <button 
                   (click)="viewPendingOrderDetails(order)"
