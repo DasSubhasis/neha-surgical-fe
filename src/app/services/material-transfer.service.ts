@@ -291,10 +291,10 @@ export class MaterialTransferService {
   }
 
   /**
-   * Get users with Delivery role (roleId = 6)
+   * Get non-admin users for delivery assignment (all active users except admin)
    */
   getDeliveryUsers(): Observable<DeliveryUser[]> {
-    return this.apiService.get<any>('/Users/role/6').pipe(
+    return this.apiService.get<any>('/Users/non-admin?isActive=Y').pipe(
       map(response => {
         console.log('Delivery users response:', response);
         // Handle both wrapped responses and direct data
