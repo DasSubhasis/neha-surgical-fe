@@ -13,6 +13,35 @@ export interface ConsumptionItem {
   manual?: boolean;
 }
 
+export interface ConsumptionView {
+  consumptionId: number;
+  orderId: number;
+  orderNo: string;
+  itemGroupId: number;
+  itemGroupName: string;
+  consumedItems: ConsumedItemView[];
+  images: ConsumptionImageView[];
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface ConsumedItemView {
+  id: string;
+  name: string;
+  quantity: number;
+  type: string;
+}
+
+export interface ConsumptionImageView {
+  imageId: number;
+  imagePath: string;
+  fileName: string;
+  fileSize: number;
+  contentType: string;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
 export interface BillingItem {
   id: string;
   name: string;
@@ -157,6 +186,13 @@ export class ConsumptionBillingService {
   // Get order details
   getOrderDetails(orderId: number): Observable<Order> {
     return this.apiService.get<ApiResponse<Order>>(ENDPOINTS.ORDERS.GET(orderId)).pipe(
+      map(response => response.data!)
+    );
+  }
+
+  // Get consumptions by order
+  getConsumptionsByOrder(orderId: number): Observable<ConsumptionView[]> {
+    return this.apiService.get<ApiResponse<ConsumptionView[]>>(`${ENDPOINTS.CONSUMPTIONS.BASE}/order/${orderId}`).pipe(
       map(response => response.data!)
     );
   }

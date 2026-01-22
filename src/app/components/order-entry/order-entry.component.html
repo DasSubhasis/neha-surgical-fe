@@ -440,4 +440,150 @@
       </div>
     </div>
   </div>
+
+  <!-- Consumptions View Modal -->
+  <div *ngIf="viewConsumptions" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-6xl my-8">
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-purple-600 to-purple-700">
+        <h2 class="text-xl font-semibold text-white">Consumption Details</h2>
+        <button
+          (click)="closeConsumptionsModal()"
+          class="text-white hover:text-purple-100 transition-colors"
+          type="button"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Modal Content -->
+      <div class="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+        <!-- Loading State -->
+        <div *ngIf="loadingConsumptions" class="flex items-center justify-center py-12">
+          <div class="text-center">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+            <p class="mt-2 text-sm text-gray-600">Loading consumptions...</p>
+          </div>
+        </div>
+
+        <!-- No Data State -->
+        <div *ngIf="!loadingConsumptions && consumptionsData.length === 0" class="text-center py-12">
+          <svg class="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <p class="text-gray-500 text-lg font-medium">No consumptions found</p>
+          <p class="text-gray-400 text-sm mt-1">There are no consumption records for this order.</p>
+        </div>
+
+        <!-- Consumptions List -->
+        <div *ngIf="!loadingConsumptions && consumptionsData.length > 0" class="space-y-6">
+          <div *ngFor="let consumption of consumptionsData; let i = index" 
+               class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow">
+            
+            <!-- Consumption Header -->
+            <div class="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-4 border-b border-purple-200">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-lg font-semibold text-gray-900">{{ consumption.itemGroupName }}</h3>
+                  <p class="text-sm text-gray-600 mt-1">Order: <span class="font-medium">{{ consumption.orderNo }}</span></p>
+                </div>
+                <div class="text-right">
+                  <p class="text-sm text-gray-600">Consumption ID: <span class="font-medium text-purple-700">#{{ consumption.consumptionId }}</span></p>
+                  <p class="text-xs text-gray-500 mt-1">{{ consumption.createdAt }}</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Consumption Body -->
+            <div class="p-6">
+              <!-- Consumed Items -->
+              <div class="mb-6">
+                <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Consumed Items</h4>
+                <div class="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
+                  <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-100">
+                      <tr>
+                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Item Name</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Quantity</th>
+                        <th class="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Type</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                      <tr *ngFor="let item of consumption.consumedItems" class="hover:bg-gray-50 transition-colors">
+                        <td class="px-4 py-3 text-sm text-gray-900">{{ item.name }}</td>
+                        <td class="px-4 py-3 text-sm text-center">
+                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ item.quantity }}
+                          </span>
+                        </td>
+                        <td class="px-4 py-3 text-sm text-center">
+                          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
+                                [ngClass]="item.type === 'Manual' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'">
+                            {{ item.type }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Images -->
+              <div *ngIf="consumption.images && consumption.images.length > 0">
+                <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Attached Images ({{ consumption.images.length }})</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div *ngFor="let image of consumption.images" 
+                       class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden hover:shadow-md transition-shadow group">
+                    <!-- Image Preview -->
+                    <div class="aspect-video bg-gray-100 overflow-hidden relative">
+                      <img 
+                        [src]="getImageUrl(image.imagePath)" 
+                        [alt]="image.fileName"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        (error)="$any($event.target).src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5JbWFnZSBOb3QgRm91bmQ8L3RleHQ+PC9zdmc+'"
+                      />
+                      <div class="absolute top-2 right-2">
+                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-black/50 text-white backdrop-blur-sm">
+                          {{ (image.fileSize / 1024).toFixed(0) }} KB
+                        </span>
+                      </div>
+                    </div>
+                    <!-- Image Info -->
+                    <div class="p-3">
+                      <p class="text-xs font-medium text-gray-900 truncate" [title]="image.fileName">{{ image.fileName }}</p>
+                      <div class="mt-1 flex items-center justify-between text-xs text-gray-500">
+                        <span>{{ image.contentType.split('/')[1].toUpperCase() }}</span>
+                        <span>{{ image.uploadedAt }}</span>
+                      </div>
+                      <p class="text-xs text-gray-400 mt-1 truncate" [title]="image.uploadedBy">By: {{ image.uploadedBy }}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Created By Info -->
+              <div class="mt-6 pt-4 border-t border-gray-200">
+                <p class="text-xs text-gray-500">
+                  Created by <span class="font-medium text-gray-700">{{ consumption.createdBy }}</span> on {{ consumption.createdAt }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+        <button
+          (click)="closeConsumptionsModal()"
+          class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          type="button"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 </div>

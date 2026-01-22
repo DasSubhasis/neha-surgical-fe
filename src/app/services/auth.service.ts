@@ -461,7 +461,7 @@ export class AuthService {
    * Fetch role permissions from the backend and store them
    */
   private fetchAndStoreRolePermissions(roleId: number): Observable<void> {
-    const url = this.buildUrl(`/api/Roles/${roleId}`);
+    const url = this.buildUrl(`/Roles/${roleId}`);
     const token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
     
     console.log('Fetching permissions for roleId:', roleId);

@@ -15,6 +15,7 @@ import { ItemService, Item } from '../../services/item.service';
 import { UserService } from '../../services/user.service';
 import { ConfigService } from '../../services/config.service';
 import { ToastService } from '../../services/toast.service';
+import { ConsumptionBillingService, ConsumptionView } from '../../services/consumption-billing.service';
 import { forkJoin } from 'rxjs';
 
 @Component({
@@ -62,6 +63,9 @@ export class OrderEntryComponent implements OnInit {
   editingOrder: Order | null = null;
   viewOrder: Order | null = null;
   viewGroupItemsData: ItemGroup | null = null;
+  viewConsumptions: boolean = false;
+  consumptionsData: ConsumptionView[] = [];
+  loadingConsumptions: boolean = false;
 
   // Form data
   formData: OrderFormData = {
@@ -156,9 +160,9 @@ export class OrderEntryComponent implements OnInit {
       field: 'actions',
       sortable: false,
       filter: false,
-      width: 120,
-      minWidth: 120,
-      maxWidth: 120,
+      width: 150,
+      minWidth: 150,
+      maxWidth: 150,
       resizable: false,
       pinned: 'right',
       suppressHeaderMenuButton: true,
@@ -182,6 +186,13 @@ export class OrderEntryComponent implements OnInit {
         viewBtn.innerHTML = `<svg class="w-4 h-4" fill="#52a447" viewBox="0 0 640 640"><path d="M320 96C239.2 96 174.5 132.8 127.4 176.6C80.6 220.1 49.3 272 34.4 307.7C31.1 315.6 31.1 324.4 34.4 332.3C49.3 368 80.6 420 127.4 463.4C174.5 507.1 239.2 544 320 544C400.8 544 465.5 507.2 512.6 463.4C559.4 419.9 590.7 368 605.6 332.3C608.9 324.4 608.9 315.6 605.6 307.7C590.7 272 559.4 220 512.6 176.6C465.5 132.9 400.8 96 320 96zM176 320C176 240.5 240.5 176 320 176C399.5 176 464 240.5 464 320C464 399.5 399.5 464 320 464C240.5 464 176 399.5 176 320zM320 256C320 291.3 291.3 320 256 320C244.5 320 233.7 317 224.3 311.6C223.3 322.5 224.2 333.7 227.2 344.8C240.9 396 293.6 426.4 344.8 412.7C396 399 426.4 346.3 412.7 295.1C400.5 249.4 357.2 220.3 311.6 224.3C316.9 233.6 320 244.4 320 256z"/></svg>`;
         viewBtn.addEventListener('click', () => this.handleView(params.data));
 
+        // Consumptions button
+        const consumptionsBtn = document.createElement('button');
+        consumptionsBtn.className = 'flex items-center justify-center text-purple-600 hover:text-purple-900 p-1 hover:bg-purple-50 rounded transition-colors duration-200';
+        consumptionsBtn.title = 'Consumptions';
+        consumptionsBtn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/></svg>`;
+        consumptionsBtn.addEventListener('click', () => this.handleConsumptions(params.data));
+
         // Delete button
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'flex items-center justify-center text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors duration-200';
@@ -191,6 +202,7 @@ export class OrderEntryComponent implements OnInit {
 
         container.appendChild(editBtn);
         container.appendChild(viewBtn);
+        container.appendChild(consumptionsBtn);
         container.appendChild(deleteBtn);
         
         return container;
@@ -236,6 +248,7 @@ export class OrderEntryComponent implements OnInit {
     private itemService: ItemService,
     private userService: UserService,
     private configService: ConfigService,
+    private consumptionBillingService: ConsumptionBillingService,
     private toastService: ToastService,
     private router: Router
   ) {}
@@ -464,6 +477,35 @@ export class OrderEntryComponent implements OnInit {
 
   closeViewOrder(): void {
     this.viewOrder = null;
+  }
+
+  handleConsumptions(order: Order): void {
+    this.loadingConsumptions = true;
+    this.viewConsumptions = true;
+    
+    this.consumptionBillingService.getConsumptionsByOrder(order.id).subscribe({
+      next: (data) => {
+        this.consumptionsData = data;
+        this.loadingConsumptions = false;
+      },
+      error: (error) => {
+        console.error('Error fetching consumptions:', error);
+        this.toastService.error('Failed to load consumptions');
+        this.loadingConsumptions = false;
+        this.viewConsumptions = false;
+      }
+    });
+  }
+
+  closeConsumptionsModal(): void {
+    this.viewConsumptions = false;
+    this.consumptionsData = [];
+    this.loadingConsumptions = false;
+  }
+
+  getImageUrl(imagePath: string): string {
+    const config = this.configService.getConfig();
+    return `${config.api.baseUrl}${imagePath}`;
   }
 
   resetForm(): void {
