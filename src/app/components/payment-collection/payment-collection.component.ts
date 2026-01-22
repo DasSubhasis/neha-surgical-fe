@@ -50,12 +50,11 @@ export class PaymentCollectionComponent implements OnInit {
 
   // Form Data
   form: PaymentFormData = {
-    receiptNo: '',
     collectionDate: this.getCurrentDate(),
+    collectedBy: '',
     doctorId: null,
     hospitalId: null,
     amount: 0,
-    collectedById: 0,
     remarks: '',
     createdBy: 'current.user@example.com'
   };
@@ -90,7 +89,7 @@ export class PaymentCollectionComponent implements OnInit {
 
   private initializeColumnDefs(): void {
     this.columnDefs = [
-      { headerName: 'Receipt No', field: 'receiptNo', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 130 },
+      { headerName: 'ID', field: 'collectionId', sortable: true, filter: 'agNumberColumnFilter', width: 80, minWidth: 80 },
       { headerName: 'Collection Date', field: 'collectionDate', sortable: true, filter: 'agDateColumnFilter', width: 140, minWidth: 140 },
       { headerName: 'Doctor', field: 'doctorName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
       { headerName: 'Hospital', field: 'hospitalName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 150 },
@@ -103,22 +102,7 @@ export class PaymentCollectionComponent implements OnInit {
         minWidth: 120,
         cellRenderer: (params: any) => `₹ ${(params.value || 0).toLocaleString('en-IN')}`
       },
-      { headerName: 'Collected By', field: 'collectedByName', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 140 },
-      {
-        headerName: 'Status',
-        field: 'status',
-        sortable: true,
-        filter: 'agTextColumnFilter',
-        width: 130,
-        minWidth: 130,
-        cellRenderer: (params: any) => {
-          const status = params.value;
-          let colorClass = 'bg-gray-100 text-gray-800';
-          if (status === 'Completed') colorClass = 'bg-green-100 text-green-800';
-          else if (status === 'Pending') colorClass = 'bg-yellow-100 text-yellow-800';
-          return `<span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${colorClass}">${status}</span>`;
-        }
-      },
+      { headerName: 'Collected By', field: 'collectedBy', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 140 },
       {
         headerName: 'Actions',
         field: 'actions',
@@ -154,7 +138,7 @@ export class PaymentCollectionComponent implements OnInit {
           deleteBtn.className = 'flex items-center justify-center text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded';
           deleteBtn.title = 'Delete';
           deleteBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>';
-          deleteBtn.addEventListener('click', () => this.handleDelete(params.data.id, params.data.receiptNo));
+          deleteBtn.addEventListener('click', () => this.handleDelete(params.data.collectionId, `#${params.data.collectionId}`));
 
           container.appendChild(editBtn);
           container.appendChild(viewBtn);
@@ -221,12 +205,11 @@ export class PaymentCollectionComponent implements OnInit {
   handleCreate(): void {
     this.editingPayment = null;
     this.form = {
-      receiptNo: this.paymentCollectionService.generateReceiptNo(),
       collectionDate: this.getCurrentDate(),
+      collectedBy: this.currentUser?.email || '',
       doctorId: null,
       hospitalId: null,
       amount: 0,
-      collectedById: this.currentUser?.id || 0,
       remarks: '',
       createdBy: 'current.user@example.com'
     };
@@ -236,14 +219,13 @@ export class PaymentCollectionComponent implements OnInit {
   handleEdit(payment: PaymentCollection): void {
     this.editingPayment = payment;
     this.form = {
-      receiptNo: payment.receiptNo,
       collectionDate: payment.collectionDate,
+      collectedBy: payment.collectedBy,
       doctorId: payment.doctorId,
       hospitalId: payment.hospitalId,
       amount: payment.amount,
-      collectedById: payment.collectedById,
       remarks: payment.remarks || '',
-      createdBy: payment.createdBy
+      createdBy: payment.createdBy || 'current.user@example.com'
     };
     this.isModalOpen = true;
   }
@@ -253,11 +235,11 @@ export class PaymentCollectionComponent implements OnInit {
     this.isViewModalOpen = true;
   }
 
-  handleDelete(id: number, receiptNo: string): void {
-    if (confirm(`Delete payment collection ${receiptNo}?`)) {
+  handleDelete(id: number, displayText: string): void {
+    if (confirm(`Delete payment collection #${id}?`)) {
       this.paymentCollectionService.deletePayment(id).subscribe({
         next: () => {
-          this.payments = this.payments.filter(p => p.id !== id);
+          this.payments = this.payments.filter(p => p.collectionId !== id);
           this.toastService.success('Payment collection deleted');
         },
         error: (error) => {
@@ -269,16 +251,15 @@ export class PaymentCollectionComponent implements OnInit {
   }
 
   handleExportCSV(): void {
-    const headers = ['Receipt No', 'Collection Date', 'Doctor', 'Hospital', 'Amount', 'Collected By', 'Remarks', 'Status'];
+    const headers = ['ID', 'Collection Date', 'Doctor', 'Hospital', 'Amount', 'Collected By', 'Remarks'];
     const csvData = this.payments.map(p => [
-      p.receiptNo,
+      p.collectionId,
       p.collectionDate,
       p.doctorName,
       p.hospitalName,
       p.amount,
-      p.collectedByName,
-      p.remarks || '',
-      p.status
+      p.collectedBy,
+      p.remarks || ''
     ]);
 
     const csvContent = [
@@ -299,10 +280,6 @@ export class PaymentCollectionComponent implements OnInit {
   }
 
   validateForm(): boolean {
-    if (!this.form.receiptNo?.trim()) {
-      this.toastService.error('Receipt No is required');
-      return false;
-    }
     if (!this.form.doctorId) {
       this.toastService.error('Doctor is required');
       return false;
@@ -328,7 +305,7 @@ export class PaymentCollectionComponent implements OnInit {
       this.toastService.error('Amount must be greater than 0');
       return false;
     }
-    if (!this.form.collectedById) {
+    if (!this.form.collectedBy?.trim()) {
       this.toastService.error('Collected By is required');
       return false;
     }
@@ -344,18 +321,34 @@ export class PaymentCollectionComponent implements OnInit {
 
     const doctorName = this.doctors.find(d => d.id === this.form.doctorId)?.name || '';
     const hospitalName = this.hospitals.find(h => h.id === this.form.hospitalId)?.name || '';
-    const collectedByName = this.users.find(u => u.id === this.form.collectedById)?.name || '';
 
     if (this.editingPayment) {
-      this.paymentCollectionService.updatePayment(this.editingPayment.id, this.form).subscribe({
-        next: (updated) => {
-          this.payments = this.payments.map(p =>
-            p.id === this.editingPayment!.id
-              ? { ...updated, doctorName, hospitalName, collectedByName }
-              : p
-          );
+      // For update, only send fields that changed
+      const updateData: Partial<PaymentFormData> = {};
+      if (this.form.collectionDate !== this.editingPayment.collectionDate) {
+        updateData.collectionDate = this.form.collectionDate;
+      }
+      if (this.form.collectedBy !== this.editingPayment.collectedBy) {
+        updateData.collectedBy = this.form.collectedBy;
+      }
+      if (this.form.doctorId !== this.editingPayment.doctorId) {
+        updateData.doctorId = this.form.doctorId;
+      }
+      if (this.form.hospitalId !== this.editingPayment.hospitalId) {
+        updateData.hospitalId = this.form.hospitalId;
+      }
+      if (this.form.amount !== this.editingPayment.amount) {
+        updateData.amount = this.form.amount;
+      }
+      if (this.form.remarks !== this.editingPayment.remarks) {
+        updateData.remarks = this.form.remarks;
+      }
+
+      this.paymentCollectionService.updatePayment(this.editingPayment.collectionId, updateData).subscribe({
+        next: () => {
           this.toastService.success('Payment collection updated');
           this.closeModal();
+          this.loadData();
         },
         error: (error) => {
           console.error('Error updating payment:', error);
@@ -364,10 +357,10 @@ export class PaymentCollectionComponent implements OnInit {
       });
     } else {
       this.paymentCollectionService.createPayment(this.form).subscribe({
-        next: (newPayment) => {
-          this.payments = [{ ...newPayment, doctorName, hospitalName, collectedByName }, ...this.payments];
+        next: () => {
           this.toastService.success('Payment collection recorded');
           this.closeModal();
+          this.loadData();
         },
         error: (error) => {
           console.error('Error creating payment:', error);

@@ -22,7 +22,7 @@ export const API_CONFIG: ApiConfigMap = {
   
   // Production environment
   PROD: {
-    BASE_URL: 'https://neha.zicorpcloud.in/api',
+    BASE_URL: 'https://nehaomapi.zicorpcloud.in/api',
     TIMEOUT: 60000, // 60 seconds
   },
   
@@ -284,12 +284,12 @@ export const ENDPOINTS = {
 
   // Payment Collection
   PAYMENTS: {
-    BASE: '/Payments',
-    LIST: '/Payments',
-    GET: (id: string | number) => `/Payments/${id}`,
-    CREATE: '/Payments',
-    UPDATE: (id: string | number) => `/Payments/${id}`,
-    DELETE: (id: string | number) => `/Payments/${id}`,
+    BASE: '/PaymentCollections',
+    LIST: '/PaymentCollections',
+    GET: (id: string | number) => `/PaymentCollections/${id}`,
+    CREATE: '/PaymentCollections',
+    UPDATE: (id: string | number) => `/PaymentCollections/${id}`,
+    DELETE: (id: string | number) => `/PaymentCollections/${id}`,
   },
   
   // Dashboard

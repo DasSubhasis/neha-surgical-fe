@@ -4,38 +4,27 @@ import { ApiService, ApiResponse } from './api.service';
 import { ENDPOINTS } from '../config/api.config';
 
 export interface PaymentCollection {
-  id: number;
-  receiptNo: string;
+  collectionId: number;
   collectionDate: string;
+  collectedBy: string;
   doctorId: number;
   doctorName: string;
   hospitalId: number;
   hospitalName: string;
   amount: number;
-  collectedById: number;
-  collectedByName: string;
   remarks?: string;
-  status: string;
-  createdBy: string;
+  createdBy?: string;
   createdAt: string;
-  audits?: AuditEntry[];
 }
 
 export interface PaymentFormData {
-  receiptNo: string;
   collectionDate: string;
+  collectedBy: string;
   doctorId: number | null;
   hospitalId: number | null;
   amount: number;
-  collectedById: number;
-  remarks: string;
+  remarks?: string;
   createdBy: string;
-}
-
-export interface AuditEntry {
-  when: string;
-  by: string;
-  action: string;
 }
 
 export interface Doctor {
@@ -75,22 +64,16 @@ export class PaymentCollectionService {
     );
   }
 
-  createPayment(data: PaymentFormData): Observable<PaymentCollection> {
-    return this.apiService.post<ApiResponse<PaymentCollection>>(ENDPOINTS.PAYMENTS.CREATE, data).pipe(
-      map((response) => response.data!)
-    );
+  createPayment(data: PaymentFormData): Observable<any> {
+    return this.apiService.post<any>(ENDPOINTS.PAYMENTS.CREATE, data);
   }
 
-  updatePayment(id: number, data: PaymentFormData): Observable<PaymentCollection> {
-    return this.apiService.put<ApiResponse<PaymentCollection>>(ENDPOINTS.PAYMENTS.UPDATE(id), data).pipe(
-      map((response) => response.data!)
-    );
+  updatePayment(id: number, data: Partial<PaymentFormData>): Observable<any> {
+    return this.apiService.put<any>(ENDPOINTS.PAYMENTS.UPDATE(id), data);
   }
 
-  deletePayment(id: number): Observable<void> {
-    return this.apiService.delete<void>(ENDPOINTS.PAYMENTS.DELETE(id)).pipe(
-      map(() => undefined)
-    );
+  deletePayment(id: number): Observable<any> {
+    return this.apiService.delete<any>(ENDPOINTS.PAYMENTS.DELETE(id));
   }
 
   getDoctors(): Observable<Doctor[]> {
@@ -109,11 +92,5 @@ export class PaymentCollectionService {
     return this.apiService.get<ApiResponse<User[]>>(ENDPOINTS.USERS.GET_ALL).pipe(
       map((response) => response.data || [])
     );
-  }
-
-  generateReceiptNo(): string {
-    const year = new Date().getFullYear();
-    const random = Math.floor(Math.random() * 9000) + 1000;
-    return `RCP-${year}-${random}`;
   }
 }

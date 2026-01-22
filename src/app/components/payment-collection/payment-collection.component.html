@@ -64,19 +64,6 @@
 
       <!-- Modal Body -->
       <div class="px-6 py-6 space-y-4 overflow-y-auto flex-1">
-        <!-- Receipt No -->
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Receipt No <span class="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            [(ngModel)]="form.receiptNo"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
-            placeholder="Auto-generated"
-          />
-        </div>
-
         <!-- Collection Date, Doctor, Hospital -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
@@ -134,22 +121,19 @@
             <label class="block text-sm font-medium text-gray-700 mb-2">
               Collected By <span class="text-red-500">*</span>
             </label>
-            <select
-              [(ngModel)]="form.collectedById"
+            <input
+              type="text"
+              [(ngModel)]="form.collectedBy"
               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 transition-all duration-200"
-            >
-              <option [value]="0">Select User</option>
-              <option *ngFor="let user of users" [value]="user.id">
-                {{ user.name }} {{ user.id === currentUser?.id ? '(You)' : '' }}
-              </option>
-            </select>
+              placeholder="Enter collector name/email"
+            />
           </div>
         </div>
 
         <!-- Remarks -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">
-            Remarks <span class="text-xs text-gray-500">({{ form.remarks.length || 0 }}/250)</span>
+            Remarks <span class="text-xs text-gray-500">({{ (form.remarks?.length || 0) }}/250)</span>
           </label>
           <textarea
             [(ngModel)]="form.remarks"
@@ -196,8 +180,8 @@
       <div class="p-6 flex-1 overflow-y-auto">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Receipt No</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewRow.receiptNo }}</div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Collection ID</div>
+            <div class="text-sm font-normal text-gray-800">#{{ viewRow.collectionId }}</div>
           </div>
           <div>
             <div class="text-xs font-bold text-indigo-800 mb-1">Collection Date</div>
@@ -217,21 +201,10 @@
           </div>
           <div>
             <div class="text-xs font-bold text-indigo-800 mb-1">Collected By</div>
-            <div class="text-sm font-normal text-gray-800">{{ viewRow.collectedByName }}</div>
+            <div class="text-sm font-normal text-gray-800">{{ viewRow.collectedBy }}</div>
           </div>
           <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Status</div>
-            <span class="inline-flex px-3 py-1 text-xs font-semibold rounded-full" 
-                  [ngClass]="{
-                    'bg-green-100 text-green-800': viewRow.status === 'Completed',
-                    'bg-yellow-100 text-yellow-800': viewRow.status === 'Pending',
-                    'bg-gray-100 text-gray-800': viewRow.status !== 'Completed' && viewRow.status !== 'Pending'
-                  }">
-              {{ viewRow.status }}
-            </span>
-          </div>
-          <div>
-            <div class="text-xs font-bold text-indigo-800 mb-1">Recorded On</div>
+            <div class="text-xs font-bold text-indigo-800 mb-1">Created At</div>
             <div class="text-sm font-normal text-gray-800">{{ formatDateTime(viewRow.createdAt) }}</div>
           </div>
 
@@ -239,28 +212,6 @@
             <div class="text-xs font-bold text-indigo-800 mb-2">Remarks</div>
             <div class="text-sm font-normal text-gray-800 bg-gray-50 p-3 rounded-lg border border-gray-200">
               {{ viewRow.remarks }}
-            </div>
-          </div>
-
-          <div *ngIf="viewRow.audits && viewRow.audits.length > 0" class="md:col-span-2">
-            <div class="text-xs font-bold text-indigo-800 mb-2">Audit Trail</div>
-            <div class="border border-gray-200 rounded-lg bg-white shadow-sm overflow-hidden">
-              <table class="w-full text-xs">
-                <thead class="bg-gray-100 text-gray-700 border-b">
-                  <tr>
-                    <th class="text-left py-2 px-3 font-medium">Action</th>
-                    <th class="text-left py-2 px-3 font-medium">By</th>
-                    <th class="text-left py-2 px-3 font-medium">When</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr *ngFor="let audit of viewRow.audits" class="border-b last:border-b-0 hover:bg-gray-50">
-                    <td class="py-2 px-3">{{ audit.action }}</td>
-                    <td class="py-2 px-3 text-gray-600">{{ audit.by }}</td>
-                    <td class="py-2 px-3 text-gray-600">{{ formatDateTime(audit.when) }}</td>
-                  </tr>
-                </tbody>
-              </table>
             </div>
           </div>
         </div>

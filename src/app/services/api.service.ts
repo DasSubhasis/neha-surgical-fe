@@ -10,6 +10,7 @@ import {
   STORAGE_KEYS,
   TIMEOUTS 
 } from '../config/api.config';
+import { ConfigService } from './config.service';
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -43,10 +44,11 @@ export class ApiService {
   private isRefreshing = false;
   private refreshTokenSubject = new BehaviorSubject<string | null>(null);
 
-  constructor(private http: HttpClient) {
-    const config = getCurrentApiConfig();
-    this.baseUrl = config.BASE_URL;
-    this.defaultTimeout = config.TIMEOUT;
+  constructor(private http: HttpClient, private configService: ConfigService) {
+    const config = this.configService.getConfig();
+    this.baseUrl = `${config.api.baseUrl}/api`;
+    const apiConfig = getCurrentApiConfig();
+    this.defaultTimeout = apiConfig.TIMEOUT;
   }
 
   /**
