@@ -633,6 +633,12 @@ export class ConsumptionBillingComponent implements OnInit {
       return;
     }
     
+    // Validate that at least one image is uploaded
+    if (this.uploadedImages.length === 0) {
+      this.toastService.error('Please upload at least one image');
+      return;
+    }
+    
     // Get current user
     const currentUser = this.authService.currentUser;
     if (!currentUser || !currentUser.email) {
