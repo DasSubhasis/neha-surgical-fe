@@ -10,10 +10,10 @@ import {
   PaymentCollection,
   PaymentFormData,
   Doctor,
-  Hospital,
-  User
+  Hospital
 } from '../../services/payment-collection.service';
 import { ToastService } from '../../services/toast.service';
+import { AuthService } from '../../services/auth.service';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
 
@@ -39,8 +39,6 @@ export class PaymentCollectionComponent implements OnInit {
   payments: PaymentCollection[] = [];
   doctors: Doctor[] = [];
   hospitals: Hospital[] = [];
-  users: User[] = [];
-  currentUser: User | null = null;
 
   // Modal States
   isModalOpen = false;
@@ -77,6 +75,7 @@ export class PaymentCollectionComponent implements OnInit {
   constructor(
     private paymentCollectionService: PaymentCollectionService,
     private toastService: ToastService,
+    private authService: AuthService,
     private router: Router
   ) {
     this.initializeColumnDefs();
@@ -174,22 +173,29 @@ export class PaymentCollectionComponent implements OnInit {
   loadData(): void {
     this.isLoading = true;
     
-    Promise.all([
-      this.paymentCollectionService.getAllPayments().toPromise(),
-      this.paymentCollectionService.getDoctors().toPromise(),
-      this.paymentCollectionService.getHospitals().toPromise(),
-      this.paymentCollectionService.getUsers().toPromise()
-    ]).then(([payments, doctors, hospitals, users]) => {
-      this.payments = payments || [];
-      this.doctors = doctors || [];
-      this.hospitals = hospitals || [];
-      this.users = users || [];
-      this.currentUser = this.users[0] || null;
-      this.isLoading = false;
-    }).catch(error => {
-      console.error('Error loading data:', error);
-      this.toastService.error('Failed to load payment collections');
-      this.isLoading = false;
+    // Load payment collections first (primary data)
+    this.paymentCollectionService.getAllPayments().subscribe({
+      next: (payments) => {
+        this.payments = payments || [];
+        
+        // Load supporting data (doctors, hospitals) - non-blocking
+        this.paymentCollectionService.getDoctors().subscribe({
+          next: (doctors) => this.doctors = doctors || [],
+          error: (err) => console.warn('Failed to load doctors:', err)
+        });
+        
+        this.paymentCollectionService.getHospitals().subscribe({
+          next: (hospitals) => this.hospitals = hospitals || [],
+          error: (err) => console.warn('Failed to load hospitals:', err)
+        });
+        
+        this.isLoading = false;
+      },
+      error: (error) => {
+        console.error('Error loading payment collections:', error);
+        this.toastService.error('Failed to load payment collections');
+        this.isLoading = false;
+      }
     });
   }
 
@@ -204,14 +210,15 @@ export class PaymentCollectionComponent implements OnInit {
 
   handleCreate(): void {
     this.editingPayment = null;
+    const currentUser = this.authService.currentUser;
     this.form = {
       collectionDate: this.getCurrentDate(),
-      collectedBy: this.currentUser?.email || '',
+      collectedBy: currentUser?.fullName || currentUser?.name || currentUser?.email || '',
       doctorId: null,
       hospitalId: null,
       amount: 0,
       remarks: '',
-      createdBy: 'current.user@example.com'
+      createdBy: currentUser?.email || 'current.user@example.com'
     };
     this.isModalOpen = true;
   }
@@ -294,6 +301,7 @@ export class PaymentCollectionComponent implements OnInit {
     }
     
     const collDate = new Date(this.form.collectionDate);
+    collDate.setHours(0, 0, 0, 0);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (collDate > today) {
@@ -319,8 +327,8 @@ export class PaymentCollectionComponent implements OnInit {
   handleSave(): void {
     if (!this.validateForm()) return;
 
-    const doctorName = this.doctors.find(d => d.id === this.form.doctorId)?.name || '';
-    const hospitalName = this.hospitals.find(h => h.id === this.form.hospitalId)?.name || '';
+    const doctorName = this.doctors.find(d => d.doctorId === this.form.doctorId)?.doctorName || '';
+    const hospitalName = this.hospitals.find(h => h.hospitalId === this.form.hospitalId)?.name || '';
 
     if (this.editingPayment) {
       // For update, only send fields that changed

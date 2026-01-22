@@ -28,22 +28,17 @@ export interface PaymentFormData {
 }
 
 export interface Doctor {
-  id: number;
-  name: string;
-  phone?: string;
+  doctorId: number;
+  doctorName: string;
+  contactNo?: string;
   email?: string;
+  specialization?: string;
 }
 
 export interface Hospital {
-  id: number;
+  hospitalId: number;
   name: string;
   address?: string;
-}
-
-export interface User {
-  id: number;
-  name: string;
-  email: string;
 }
 
 @Injectable({
@@ -77,19 +72,11 @@ export class PaymentCollectionService {
   }
 
   getDoctors(): Observable<Doctor[]> {
-    return this.apiService.get<ApiResponse<Doctor[]>>(ENDPOINTS.DOCTORS.LIST(true)).pipe(
-      map((response) => response.data || [])
-    );
+    return this.apiService.get<Doctor[]>(ENDPOINTS.DOCTORS.LIST(true));
   }
 
   getHospitals(): Observable<Hospital[]> {
     return this.apiService.get<ApiResponse<Hospital[]>>(ENDPOINTS.HOSPITALS.LIST(true)).pipe(
-      map((response) => response.data || [])
-    );
-  }
-
-  getUsers(): Observable<User[]> {
-    return this.apiService.get<ApiResponse<User[]>>(ENDPOINTS.USERS.GET_ALL).pipe(
       map((response) => response.data || [])
     );
   }
