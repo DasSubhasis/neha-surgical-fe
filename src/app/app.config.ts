@@ -12,7 +12,9 @@ import { provideServiceWorker } from '@angular/service-worker';
 ModuleRegistry.registerModules([AllCommunityModule]);
 
 export function initializeApp(configService: ConfigService) {
-  return () => configService.loadConfig();
+  return (): Promise<void> => {
+    return configService.loadConfig();
+  };
 }
 
 export const appConfig: ApplicationConfig = {
