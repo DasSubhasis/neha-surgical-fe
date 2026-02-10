@@ -45,9 +45,9 @@ export class ApiService {
   private refreshTokenSubject = new BehaviorSubject<string | null>(null);
 
   constructor(private http: HttpClient, private configService: ConfigService) {
-    const config = this.configService.getConfig();
-    this.baseUrl = `${config.api.baseUrl}/api`;
+    // Use auto-detected environment config instead of appsettings.json
     const apiConfig = getCurrentApiConfig();
+    this.baseUrl = apiConfig.BASE_URL; // Already includes /api
     this.defaultTimeout = apiConfig.TIMEOUT;
   }
 

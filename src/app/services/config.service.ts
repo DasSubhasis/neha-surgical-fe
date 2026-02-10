@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
+import { getCurrentApiConfig } from '../config/api.config';
 
 export interface AppSettings {
   roles: {
@@ -25,14 +26,15 @@ export class ConfigService {
         this.http.get<AppSettings>('/appsettings.json')
       );
     } catch (error) {
-      console.error('Failed to load appsettings.json, using defaults:', error);
-      // Fallback to default configuration
+      console.error('Failed to load appsettings.json, using environment-based defaults:', error);
+      // Fallback to environment-based configuration
+      const apiConfig = getCurrentApiConfig();
       this.config = {
         roles: {
           assistantRoleId: 4
         },
         api: {
-          baseUrl: 'http://localhost:5280'
+          baseUrl: apiConfig.BASE_URL.replace('/api', '') // Remove /api suffix
         }
       };
     }
