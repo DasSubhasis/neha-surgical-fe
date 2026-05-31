@@ -980,11 +980,11 @@ npm run build
 
 ## 7.3 Environment Separation
 
-| Environment | API URL | Purpose |
-|-------------|---------|---------|
-| Development | localhost:7019 | Local development |
-| Staging | staging-api.domain.com | Pre-production testing |
-| Production | api.domain.com | Live environment |
+| Environment | API URL                | Purpose                |
+|-------------|------------------------|------------------------|
+| Development | localhost:7019         | Local development      |
+| Staging     | staging-api.domain.com | Pre-production testing |
+| Production  | api.domain.com         | Live environment       |
 
 ### Environment Configuration
 ```javascript
