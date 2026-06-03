@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BehaviorSubject, Observable, of, throwError } from 'rxjs';
-import { map, catchError, tap, switchMap } from 'rxjs/operators';
+import { BehaviorSubject, Observable, of, throwError, timer } from 'rxjs';
+import { map, catchError, tap, switchMap, retry } from 'rxjs/operators';
 import { 
   getCurrentApiConfig, 
   ENDPOINTS, 
@@ -146,6 +146,7 @@ export class AuthService {
     return this.http.post<OtpResponse>(url, { email }, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
+      retry({ count: 2, delay: (err) => { if (err.status === 0) return timer(3000); throw err; } }),
       tap(response => {
         // Store OTP-related data
         localStorage.setItem(STORAGE_KEYS.OTP_EMAIL, email);
@@ -172,6 +173,7 @@ export class AuthService {
     return this.http.post<AuthResponse>(url, { email, otp }, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
+      retry({ count: 2, delay: (err) => { if (err.status === 0) return timer(3000); throw err; } }),
       switchMap(response => {
         console.log('OTP verify response:', response);
         if (response.data) {
@@ -207,6 +209,7 @@ export class AuthService {
     return this.http.post<OtpResponse>(url, { email }, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
+      retry({ count: 2, delay: (err) => { if (err.status === 0) return timer(3000); throw err; } }),
       tap(response => {
         localStorage.setItem(STORAGE_KEYS.OTP_SENT_TIME, new Date().toISOString());
         if (response.data?.expiresIn) {
@@ -234,6 +237,7 @@ export class AuthService {
     return this.http.post<AuthResponse>(url, body, {
       headers: new HttpHeaders({ 'Content-Type': 'application/json' })
     }).pipe(
+      retry({ count: 2, delay: (err) => { if (err.status === 0) return timer(3000); throw err; } }),
       tap(response => {
         if (response.data) {
           this.handleAuthSuccess(response.data);

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams, HttpErrorResponse } from '@angular/common/http';
-import { Observable, throwError, BehaviorSubject } from 'rxjs';
+import { Observable, throwError, BehaviorSubject, timer } from 'rxjs';
 import { catchError, map, timeout, retry } from 'rxjs/operators';
 import { 
   getCurrentApiConfig, 
@@ -180,7 +180,17 @@ export class ApiService {
 
     return request$.pipe(
       timeout(requestTimeout),
-      retry(retryCount),
+      retry({
+        count: Math.max(retryCount, 2),
+        delay: (error, attempt) => {
+          // Retry network-level failures (ERR_CONNECTION_REFUSED = status 0) with a delay.
+          // This covers the brief window during IIS app pool recycling/restart.
+          if (error?.status === 0 && attempt <= 2) {
+            return timer(3000);
+          }
+          throw error;
+        }
+      }),
       catchError(error => this.handleError(error))
     );
   }

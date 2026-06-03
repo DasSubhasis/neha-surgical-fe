@@ -1,4 +1,4 @@
-import { Component, OnInit, EventEmitter, Output } from '@angular/core';
+import { Component, OnInit, EventEmitter, Output, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -7,12 +7,14 @@ import { ColDef, GridReadyEvent, GridApi } from 'ag-grid-community';
 import { BreadcrumbComponent } from '../../shared/components/breadcrumb/breadcrumb.component';
 import { ActionDropdownComponent, ActionItem } from '../action-dropdown/action-dropdown.component';
 import { SearchableDropdownComponent } from '../searchable-dropdown/searchable-dropdown.component';
+import { SearchableMultiselectComponent } from '../searchable-multiselect/searchable-multiselect.component';
 import { OrderService, Order, OrderFormData, OrderItem, ItemGroup } from '../../services/order.service';
 import { DoctorService, Doctor } from '../../services/doctor.service';
 import { HospitalService, Hospital } from '../../services/hospital.service';
 import { ItemGroupService, ItemGroup as ItemGroupType } from '../../services/item-group.service';
 import { ItemService, Item } from '../../services/item.service';
 import { UserService } from '../../services/user.service';
+import { AuthService } from '../../services/auth.service';
 import { ConfigService } from '../../services/config.service';
 import { ToastService } from '../../services/toast.service';
 import { ConsumptionBillingService, ConsumptionView } from '../../services/consumption-billing.service';
@@ -21,7 +23,7 @@ import { forkJoin } from 'rxjs';
 @Component({
   selector: 'app-order-entry',
   standalone: true,
-  imports: [CommonModule, FormsModule, AgGridModule, BreadcrumbComponent, ActionDropdownComponent, SearchableDropdownComponent],
+  imports: [CommonModule, FormsModule, AgGridModule, BreadcrumbComponent, ActionDropdownComponent, SearchableDropdownComponent, SearchableMultiselectComponent],
   templateUrl: './order-entry.component.html',
   styles: [`
     :host ::ng-deep .ag-header-small-font .ag-header-cell-label {
@@ -43,6 +45,13 @@ import { forkJoin } from 'rxjs';
 })
 export class OrderEntryComponent implements OnInit {
   @Output() navigate = new EventEmitter<string>();
+
+  isMobile: boolean = window.innerWidth < 768;
+
+  @HostListener('window:resize')
+  onResize() {
+    this.isMobile = window.innerWidth < 768;
+  }
 
   orders: Order[] = [];
   doctors: Doctor[] = [];
@@ -78,7 +87,7 @@ export class OrderEntryComponent implements OnInit {
     itemGroups: [],
     items: [],
     remarks: '',
-    createdBy: 'current.user@example.com'
+    createdBy: ''
   };
 
   // Items summary for modal
@@ -92,13 +101,24 @@ export class OrderEntryComponent implements OnInit {
 
   // AG Grid column definitions
   columnDefs: ColDef[] = [
-    { 
-      headerName: 'Operation Date/Time', 
-      field: 'operationDate', 
-      sortable: true, 
-      filter: 'agDateColumnFilter', 
-      width: 150,
-      minWidth: 150,
+    {
+      headerName: 'SL No.',
+      sortable: false,
+      filter: false,
+      width: 70,
+      minWidth: 70,
+      maxWidth: 70,
+      resizable: false,
+      valueGetter: (params: any) => (params.node.rowIndex ?? 0) + 1
+    },
+    {
+      headerName: 'Operation Date/Time',
+      field: 'operationDate',
+      sortable: true,
+      filter: 'agDateColumnFilter',
+      sort: 'desc',
+      width: 200,
+      minWidth: 200,
       cellRenderer: (params: any) => {
         const date = params.data.operationDate;
         const time = params.data.operationTime;
@@ -154,6 +174,14 @@ export class OrderEntryComponent implements OnInit {
         span.textContent = status;
         return span;
       }
+    },
+    {
+      headerName: 'Created By',
+      field: 'createdBy',
+      sortable: true,
+      filter: 'agTextColumnFilter',
+      width: 150,
+      minWidth: 150
     },
     {
       headerName: 'Actions',
@@ -250,7 +278,8 @@ export class OrderEntryComponent implements OnInit {
     private configService: ConfigService,
     private consumptionBillingService: ConsumptionBillingService,
     private toastService: ToastService,
-    private router: Router
+    private router: Router,
+    private authService: AuthService
   ) {}
 
   ngOnInit(): void {
@@ -259,6 +288,10 @@ export class OrderEntryComponent implements OnInit {
     this.fetchHospitals();
     this.fetchItemGroups();
     this.fetchAllItems();
+  }
+
+  private getCurrentUserName(): string {
+    return this.authService.currentUser?.fullName || this.authService.currentUser?.email || '';
   }
 
   private getCurrentDate(): string {
@@ -324,7 +357,10 @@ export class OrderEntryComponent implements OnInit {
     
     this.orderService.getOrders().subscribe({
       next: (data) => {
-        this.orders = data;
+        this.orders = data.sort((a, b) =>
+          new Date(b.operationDate + 'T' + (b.operationTime || '00:00')).getTime() -
+          new Date(a.operationDate + 'T' + (a.operationTime || '00:00')).getTime()
+        );
         this.loading = false;
         if (this.gridReady && this.gridApi) {
           this.gridApi.setGridOption('rowData', this.orders);
@@ -405,7 +441,7 @@ export class OrderEntryComponent implements OnInit {
       itemGroups: [],
       items: [],
       remarks: '',
-      createdBy: 'current.user@example.com'
+      createdBy: this.getCurrentUserName()
     };
     this.itemsSummary = [];
     this.selectedItemGroupIds = [];
@@ -519,7 +555,7 @@ export class OrderEntryComponent implements OnInit {
       itemGroups: [],
       items: [],
       remarks: '',
-      createdBy: 'current.user@example.com'
+      createdBy: this.getCurrentUserName()
     };
     this.itemsSummary = [];
     this.selectedItemGroupIds = [];
