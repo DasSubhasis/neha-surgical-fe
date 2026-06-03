@@ -10,7 +10,9 @@ import {
   PaymentCollection,
   PaymentFormData,
   Doctor,
-  Hospital
+  Hospital,
+  PAYMENT_MODES,
+  paymentReferenceLabel
 } from '../../services/payment-collection.service';
 import { ToastService } from '../../services/toast.service';
 import { AuthService } from '../../services/auth.service';
@@ -54,6 +56,8 @@ export class PaymentCollectionComponent implements OnInit {
     hospitalId: null,
     amount: 0,
     remarks: '',
+    paymentMode: '',
+    paymentReference: '',
     createdBy: 'current.user@example.com'
   };
 
@@ -68,6 +72,10 @@ export class PaymentCollectionComponent implements OnInit {
     filter: true,
     floatingFilter: false,
   };
+
+  // Payment mode options
+  readonly paymentModes = PAYMENT_MODES;
+  readonly paymentReferenceLabel = paymentReferenceLabel;
 
   // Action dropdown items
   actionItems: ActionItem[][] = [];
@@ -102,6 +110,8 @@ export class PaymentCollectionComponent implements OnInit {
         cellRenderer: (params: any) => `₹ ${(params.value || 0).toLocaleString('en-IN')}`
       },
       { headerName: 'Collected By', field: 'collectedBy', sortable: true, filter: 'agTextColumnFilter', flex: 1, minWidth: 140 },
+      { headerName: 'Payment Mode', field: 'paymentMode', sortable: true, filter: 'agTextColumnFilter', width: 130, minWidth: 120 },
+      { headerName: 'Reference No.', field: 'paymentReference', sortable: true, filter: 'agTextColumnFilter', width: 140, minWidth: 120 },
       {
         headerName: 'Actions',
         field: 'actions',
@@ -218,6 +228,8 @@ export class PaymentCollectionComponent implements OnInit {
       hospitalId: null,
       amount: 0,
       remarks: '',
+      paymentMode: '',
+      paymentReference: '',
       createdBy: currentUser?.email || 'current.user@example.com'
     };
     this.isModalOpen = true;
@@ -232,6 +244,8 @@ export class PaymentCollectionComponent implements OnInit {
       hospitalId: payment.hospitalId,
       amount: payment.amount,
       remarks: payment.remarks || '',
+      paymentMode: payment.paymentMode || '',
+      paymentReference: payment.paymentReference || '',
       createdBy: payment.createdBy || 'current.user@example.com'
     };
     this.isModalOpen = true;
@@ -258,7 +272,7 @@ export class PaymentCollectionComponent implements OnInit {
   }
 
   handleExportCSV(): void {
-    const headers = ['ID', 'Collection Date', 'Doctor', 'Hospital', 'Amount', 'Collected By', 'Remarks'];
+    const headers = ['ID', 'Collection Date', 'Doctor', 'Hospital', 'Amount', 'Collected By', 'Payment Mode', 'Reference No.', 'Remarks'];
     const csvData = this.payments.map(p => [
       p.collectionId,
       p.collectionDate,
@@ -266,6 +280,8 @@ export class PaymentCollectionComponent implements OnInit {
       p.hospitalName,
       p.amount,
       p.collectedBy,
+      p.paymentMode || '',
+      p.paymentReference || '',
       p.remarks || ''
     ]);
 
@@ -321,6 +337,10 @@ export class PaymentCollectionComponent implements OnInit {
       this.toastService.error('Remarks cannot exceed 250 characters');
       return false;
     }
+    if (this.form.paymentMode && this.form.paymentMode !== 'Cash' && !this.form.paymentReference?.trim()) {
+      this.toastService.error(`${paymentReferenceLabel(this.form.paymentMode)} is required for ${this.form.paymentMode} payments`);
+      return false;
+    }
     return true;
   }
 
@@ -350,6 +370,12 @@ export class PaymentCollectionComponent implements OnInit {
       }
       if (this.form.remarks !== this.editingPayment.remarks) {
         updateData.remarks = this.form.remarks;
+      }
+      if (this.form.paymentMode !== (this.editingPayment.paymentMode || '')) {
+        updateData.paymentMode = this.form.paymentMode;
+      }
+      if (this.form.paymentReference !== (this.editingPayment.paymentReference || '')) {
+        updateData.paymentReference = this.form.paymentReference;
       }
 
       this.paymentCollectionService.updatePayment(this.editingPayment.collectionId, updateData).subscribe({

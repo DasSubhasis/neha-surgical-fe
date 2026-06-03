@@ -3,6 +3,21 @@ import { Observable, map } from 'rxjs';
 import { ApiService, ApiResponse } from './api.service';
 import { ENDPOINTS } from '../config/api.config';
 
+export const PAYMENT_MODES = ['Cash', 'Cheque', 'UPI', 'NEFT', 'RTGS', 'DD', 'Bank Transfer'] as const;
+export type PaymentMode = typeof PAYMENT_MODES[number];
+
+export function paymentReferenceLabel(mode: string | null | undefined): string {
+  switch (mode) {
+    case 'Cheque': return 'Cheque Number';
+    case 'UPI':    return 'UPI / UTR Number';
+    case 'NEFT':
+    case 'RTGS':   return 'Transaction Reference';
+    case 'DD':     return 'DD Number';
+    case 'Bank Transfer': return 'Reference Number';
+    default:       return 'Reference Number';
+  }
+}
+
 export interface PaymentCollection {
   collectionId: number;
   collectionDate: string;
@@ -13,6 +28,8 @@ export interface PaymentCollection {
   hospitalName: string;
   amount: number;
   remarks?: string;
+  paymentMode?: string;
+  paymentReference?: string;
   createdBy?: string;
   createdAt: string;
 }
@@ -24,6 +41,8 @@ export interface PaymentFormData {
   hospitalId: number | null;
   amount: number;
   remarks?: string;
+  paymentMode?: string;
+  paymentReference?: string;
   createdBy: string;
 }
 
